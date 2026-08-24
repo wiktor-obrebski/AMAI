@@ -110,6 +110,11 @@ globals
     boolean zep_next_wave           = false
     boolean form_group_timeouts     = true
 
+    gamecache trace_log_cache = InitGameCache("AMAI_Trace.w3v")
+    integer trace_log_index = 0
+    integer trace_log_unsaved = 0
+    boolean trace_log_initialized = false
+
 
     // =============================================================
     // AMAI constants
@@ -1522,7 +1527,7 @@ endfunction
 function DisplayToAll takes string s returns nothing
   local integer i = 0
   loop
-    call DisplayTimedTextToPlayer(Player(i),0,0,15,message_add+s)
+    call DisplayTimedTextToPlayer(Player(i),0,0,1,message_add+s)
     set i = i + 1
     exitwhen i >= GetBJMaxPlayers()
   endloop
@@ -1684,10 +1689,41 @@ function Trace takes string s returns nothing
   endif
 endfunction
 
-function TraceAll takes string s returns nothing
-  if debugging == 1 then
-    call DisplayToAll(s)
+function TraceLogInit takes nothing returns nothing
+  if not trace_log_initialized then
+    call FlushStoredMission(trace_log_cache, "P" + Int2Str(GetAiPlayer()))
+    set trace_log_index = 0
+    set trace_log_unsaved = 0
+    set trace_log_initialized = true
   endif
+endfunction
+
+function TraceLogFlush takes nothing returns nothing
+  if trace_log_initialized then
+    call SaveGameCache(trace_log_cache)
+    set trace_log_unsaved = 0
+  endif
+endfunction
+
+function TraceLog takes string s returns nothing
+  call TraceLogInit()
+
+  call StoreString(trace_log_cache, "P" + Int2Str(GetAiPlayer()), "L" + Int2Str(trace_log_index), s)
+
+  set trace_log_index = trace_log_index + 1
+  set trace_log_unsaved = trace_log_unsaved + 1
+
+  call StoreInteger(trace_log_cache, "P" + Int2Str(GetAiPlayer()), "Count", trace_log_index)
+
+  if trace_log_unsaved >= 10 then
+    call TraceLogFlush()
+  endif
+endfunction
+
+function TraceAll takes string s returns nothing
+  // if debugging == 1 then
+  call TraceLog(s)
+  // endif
 endfunction
 
 //============================================================================
@@ -5818,6 +5854,114 @@ function GetOwnStrength takes nothing returns integer
 endfunction
 
 //============================================================================
+function IsRetreatUnavailableForAttack takes unit u returns boolean
+  return IsUnitInGroup(u, in_retreat_group) or IsUnitInGroup(u, retreat_reset_pending)
+endfunction
+
+function GetHeroBonusStrengthForUnit takes unit u returns integer
+  local integer unitid = GetUnitTypeId(u)
+
+#INCLUDETABLE <$VER$\StandardUnits.txt> #EFR #COND %#OEVAL{16} != 0
+  if unitid == o%1 then
+    return %#OEVAL{16}
+  endif
+#ENDINCLUDE
+
+  return 0
+endfunction
+
+function GetOwnAttackHeroStrength takes nothing returns integer
+  local group g = CreateGroup()
+  local unit u = null
+  local integer sum = GetPlayerHeroBonusStrength(ai_player)
+  local real handicap = GetPlayerStrengthHandicap(ai_player)
+
+  call GroupEnumUnitsOfPlayer(g, ai_player, null)
+
+  loop
+    set u = FirstOfGroup(g)
+    exitwhen u == null
+
+    if IsUnitType(u, UNIT_TYPE_HERO) then
+      if IsRetreatUnavailableForAttack(u) then
+        set sum = sum - GetHeroBonusStrengthForUnit(u)
+      elseif UnitAlive(u) then
+        set sum = sum + R2I(GetHeroStrength(u) * handicap * (GetUnitState(u, UNIT_STATE_LIFE) / RMax(GetUnitState(u, UNIT_STATE_MAX_LIFE), 1)))
+      endif
+    endif
+
+    call GroupRemoveUnit(g, u)
+  endloop
+
+  call DestroyGroup(g)
+  set g = null
+
+  return Max(sum, 0)
+endfunction
+
+function GetOwnAttackStrength takes nothing returns integer
+  local real sum = 0
+  local group g = CreateGroup()
+  local unit u = null
+  local integer max_ghouls = TownCountDone(racial_ghoul) - harvesting_ghouls
+  local integer ghoul_num = 0
+  local real airsum = 0
+  local real strength = 0
+
+  // Exact existing behavior when no retreat units are unavailable.
+  if BlzGroupGetSize(in_retreat_group) == 0 and BlzGroupGetSize(retreat_reset_pending) == 0 then
+    call DestroyGroup(g)
+    set g = null
+    return GetOwnStrength()
+  endif
+
+  call GroupEnumUnitsOfPlayer(g, ai_player, null)
+
+  loop
+    set u = FirstOfGroup(g)
+    exitwhen u == null
+
+    if not IsRetreatUnavailableForAttack(u) then
+
+      if GetUnitTypeId(u) == old_id[racial_rushcreep] and br_rush_attacked and UnitAlive(u) and not IsUnitHidden(u) then
+        set sum = sum + 5
+      endif
+
+      if ancient_expanding and ancient_exp_state >= 2 and u == ancient_exp_unit and UnitAlive(u) and not IsUnitHidden(u) then
+        set sum = sum + 7
+      endif
+
+      if UnitAlive(u) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_HERO) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) and not IsUnitInGroup(u, unit_healing) and not IsUnitHidden(u) then
+        set strength = GetUnitStrength(u)
+
+        if GetUnitTypeId(u) == old_id[racial_ghoul] then
+          if ghoul_num < max_ghouls then
+            set sum = sum + strength
+            set ghoul_num = ghoul_num + 1
+          endif
+        else
+          set sum = sum + strength
+        endif
+
+        if IsUnitType(u, UNIT_TYPE_ATTACKS_FLYING) then
+          set airsum = airsum + strength
+        endif
+      endif
+
+    endif
+
+    call GroupRemoveUnit(g, u)
+  endloop
+
+  call DestroyGroup(g)
+  set g = null
+
+  set air_strength = R2I(airsum + 0.5)
+
+  return R2I(sum) + GetOwnAttackHeroStrength()
+endfunction
+
+//============================================================================
 // Helper: decide if a tower rush should be ended based on strength comparisons.
 // Returns true when enemy strength around the target greatly exceeds own strength.
 function ShouldEndTowerRushStrength takes real tx, real ty, integer towers_built, integer towers_built_count, integer towers_attck, real bt returns boolean
@@ -9154,6 +9298,9 @@ function InitAMAI takes nothing returns nothing
   set sleep_multiplier = GetSleepMultipler(c_ai_total)
   set difficulty = MeleeDifficulty()
   set income_per_mine = income_per_mine * Max(difficulty - 1, 1)
+  if difficulty == HARD then
+    set income_per_mine = 15
+  endif
   call Trace("Init AMAI step 1")
   call InitNeutralSpecial()
   call Trace("Init AMAI step 2")
@@ -12583,6 +12730,7 @@ function SleepInCombatAM takes boolean ally_override returns nothing
             call FormGroupAM(0)
         endif
         if true or CaptainAtGoal() or (attack_length_counter == 0 and not CaptainInCombat(true)) or CaptainInCombat(true) or ally_override or c_ally_total == 0 then
+          call TraceAll("DBG RAW ATTACK: SleepInCombat captain=" + Int2Str(CaptainGroupSize()) + " fleeing=" + B2S(isfleeing) + " retreatCtl=" + B2S(retreat_controlled))
           call AttackMoveKill(u) // Use existing troops
         elseif (c_ally_total > 0 and not ally_override) then
           call CaptainAttack(GetUnitX(u), GetUnitY(u)) // Override hardcoded logic with attackmovekill as ally targets will change the attackmovekill we wanted. Teleport ignores the ally control.
@@ -12774,6 +12922,7 @@ function CommonSleepUntilTargetDeadAM takes unit target, boolean iscreeping, boo
       set lastcaptainx = GetUnitX(target)
       set lastcaptainy = GetUnitY(target)  
       if true or CaptainAtGoal() or (attack_length_counter == 0 and not CaptainInCombat(true)) or CaptainInCombat(true) or ally_override or c_ally_total == 0 then
+        call TraceAll("DBG RAW ATTACK: CommonSleepUntilTargetDead captain=" + Int2Str(CaptainGroupSize()) + " break=" + B2S(break_attack) + " desperation=" + B2S(desperation_assault) + " attackRunning=" + B2S(attack_running) + " fleeing=" + B2S(isfleeing) + " retreatCtl=" + B2S(retreat_controlled))
         call AttackMoveKill(target) // use attack length counter to do an ocassional attack move incase enemies nearby
       elseif (c_ally_total > 0 and not ally_override) then // CURRENTLY DISABLED AS FIGHTS WITH ABOVE, NEED NEW COMBAT ATTACK MOVE FUNCTION
         call CaptainAttack(GetUnitX(target), GetUnitY(target)) // Override hardcoded logic from attackmovekill which will help allies, but this is not an attack move operation
@@ -12951,6 +13100,9 @@ function AttackMoveKillAAM takes unit target, boolean ally_override returns noth
     call Sleep(3 * sleep_multiplier)
     return
   endif
+
+  call TraceAll("DBG ATTACK ISSUE: captain=" +Int2Str(CaptainGroupSize()) +" ownStrength=" +Int2Str(GetOwnStrength()) +" pendingReset=" +Int2Str(BlzGroupGetSize(retreat_reset_pending)) +" fleeing=" + B2S(isfleeing) +" retreatCtl=" + B2S(retreat_controlled) +" targetPlayer=" +Int2Str(GetPlayerId(GetOwningPlayer(target))))
+
   set attack_running = true
   call DoAttackJobs()
   if distraction_group != 0 and GetOwningPlayer(target) != Player(PLAYER_NEUTRAL_AGGRESSIVE) and GetRandomInt(1,10) < 5 then
@@ -12979,6 +13131,7 @@ function AttackMoveKillCreep takes unit target, boolean ally_override returns no
   call FromGroupAndGhoulsAM(3)
   set attack_running = true
   call EnableRetreatControl()
+  call TraceAll("DBG RAW ATTACK: Creep captain=" + Int2Str(CaptainGroupSize()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
   call AttackMoveKill(target)
   call ReformUntilTargetDeadAM(target, true, ally_override)
   call Chat(C_Done)
@@ -12995,6 +13148,7 @@ function AttackMoveKillXYAAM takes integer x, integer y returns nothing
     call LoadZepWave(x,y)
     set zep_next_wave = false
   endif
+  call TraceAll("DBG RAW ATTACK: XY captain=" + Int2Str(CaptainGroupSize()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
   call AttackMoveXY(x,y)
   set lastcaptainx = x
   set lastcaptainy = y
@@ -13080,19 +13234,29 @@ endfunction
 //============================================================================
 function CreepAttack takes integer str returns nothing
   local unit target = null
-  set target = GetFittingCreep(target,str)
-// Creep camp small is level 1 - 9
-// Creep camp medium is level 10 - 19
-// Creep camp strong is level 20 - 100
+  local integer tmp_creep_strength = 0
+  local integer enemy_near_creep = 0
 
+  set target = GetFittingCreep(target, str)
+
+  // Creep camp small is level 1 - 9
+  // Creep camp medium is level 10 - 19
+  // Creep camp strong is level 20 - 100
   if target == null then
     call Trace("No creep target found")
     call Sleep(3 * sleep_multiplier)
     return
   endif
+
+  set tmp_creep_strength = GetCreepCampStrength(target)
+  set enemy_near_creep = GetLocationNonCreepStrength(GetUnitX(target), GetUnitY(target), 1500)
+
+  call TraceAll("DBG CREEP SELECT: own=" + Int2Str(str) + " captain=" + Int2Str(CaptainGroupSize()) + " creep=" + Int2Str(tmp_creep_strength) + " enemyNear=" + Int2Str(enemy_near_creep))
+
   if air_strength > 15 then
     call SetAllianceTargetIfLeadAndChat(target, C_Creep)
   endif
+
   call AttackMoveKillCreep(target, true)
   call ClearAllianceTarget(target)
   set target = null
@@ -13808,6 +13972,8 @@ function SingleMeleeAttackAM takes boolean needs_exp, boolean has_siege, integer
           //call Chat(C_Ally)
           call FromGroupAndGhoulsAM(3)
           call DesperationAssault()
+          // desperation branch
+          call TraceAll("DBG ATTACK PATH: DESPERATION")
           call AttackMoveKillAAM(common, true)
           call ClearAllianceTarget(common)
           set common = null
@@ -13890,6 +14056,7 @@ function SingleMeleeAttackAM takes boolean needs_exp, boolean has_siege, integer
       return
     endif
     call FromGroupAndGhoulsAM(3)
+    call TraceAll("DBG ATTACK PATH: FORCED_PLAYER")
     call AttackMoveKillAAM(hall, false)
     call Trace("Attack complete" )
     set hall = null
@@ -13945,7 +14112,7 @@ function SingleMeleeAttackAM takes boolean needs_exp, boolean has_siege, integer
 
     // ancient expansion attack
     //
-    if ancient_expanding and GetOwnStrength() >= GetAncientCampStrength() then
+    if ancient_expanding and ai_strength >= GetAncientCampStrength() then
       if ancient_exp_state == 3 and ancient_exp_unit != null then
         call AncientExpaAttack()
         return
@@ -14038,6 +14205,7 @@ function SingleMeleeAttackAM takes boolean needs_exp, boolean has_siege, integer
           //call SetChatVarsAttack(mega)
           call Chat(C_Mega) // This chat is to enemies not allies
           call FromGroupAndGhoulsAM(3)
+          call TraceAll("DBG ATTACK PATH: MEGA")
           call AttackMoveKillAAM(mega, true)
           call ClearAllianceTarget(mega)
           set mega = null
@@ -14049,6 +14217,7 @@ function SingleMeleeAttackAM takes boolean needs_exp, boolean has_siege, integer
       if GetHeroXP(hero_unit[1]) < GetRandomInt(50,150) or GetHeroXP(hero_unit[1]) > GetRandomInt(300,850) or GetHeroXP(hero_unit[2]) > 450 or FoodUsed() > GetRandomInt(40,60) then
         set hall = ChooseAttackTarget(hall)
         if hall != null and UnitAlive(hall) then
+          call TraceAll("DBG ATTACK PATH: NORMAL")
           call SetAllianceTargetIfLeadAndChat(alli_target, C_Attack)
           call FromGroupAndGhoulsAM(3)
           call AttackMoveKillAAM(hall, true)
@@ -14417,7 +14586,7 @@ function universal_attack_sequence takes nothing returns nothing
     return
   endif
   call SetTargetHeroes(difficulty != EASY)
-  set ai_strength = GetOwnStrength()
+  set ai_strength = GetOwnAttackStrength()
   set ai_antiair_strength = air_strength
   if current_expansion != null then
     set exp_strength = GetExpansionStrength()

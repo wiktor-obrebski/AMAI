@@ -13,6 +13,7 @@
     integer added_target_aggression = 0  // The current bonus aggression added to current attack specified in the profiles
     integer added_racial_aggression = 0  // The current bonus added to current attack based on which race amai is attacking
     group in_retreat_group = CreateGroup()
+    group retreat_reset_pending = CreateGroup()
 
     location enemy_loc = Location(0,0)
     location last_enemy_loc = Location(0,0)
@@ -126,6 +127,7 @@ if ((not attack_running and not isfleeing) or isfleeing or (town_threatened and 
     call TraceAll("RETREAT: Pending End fleeing:" + B2S(isfleeing))
     if CaptainIsHome() or retreat_end_switch or (not attack_running and not isfleeing) or player_defeated or (main_army >= 0 and DistanceBetweenPoints(army_loc[main_army], captain_home) <= 750) then
       call TraceAll("===Retreat control ended===")
+      call TraceAll("DBG RETREAT END: captain=" + Int2Str(CaptainGroupSize()) + " break=" + B2S(break_attack) + " desperation=" + B2S(desperation_assault) + " attackRunning=" + B2S(attack_running) + " captainHome=" + B2S(CaptainIsHome()) + " captainRetreating=" + B2S(CaptainRetreating()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
       set retreat_controlled = false
       set canflee = false
       set isfleeing = false     // home so no need to be retreating. Also prevents bug in the captainretreating condition
@@ -151,14 +153,15 @@ if isfleeing or (town_threatened and town_threat_break) then
       set u = FirstOfGroup(g)
       exitwhen u == null
       // Only send standard (combat) units, skip peons/structures/heroes and units in healing/rescue groups
-      if IsStandardUnit(u) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) and DistanceBetweenPoints(GetUnitLoc(u), captain_home) > 600 then
+      if IsStandardUnit(u) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) and DistanceBetweenPoints(GetUnitLoc(u), captain_home) > 650 then
         if GetUnitCurrentOrder(u) != OrderId("harvest") then
-          call RemoveGuardPosition(u)
-          // use p==1 to indicate forced retreat in SEND_HOME
-          call TQAddUnitJob(0, SEND_HOME, 1, u)
           // track retreating units so we don't re-add them
           if not IsUnitInGroup(u, in_retreat_group) then
-            call GroupAddUnit(in_retreat_group, u)
+              call RemoveGuardPosition(u)
+              call GroupAddUnit(in_retreat_group, u)
+              call GroupRemoveUnit(in_retreat_group, u)
+              // use p==1 to indicate forced retreat in SEND_HOME
+              call TQAddUnitJob(0, SEND_HOME, 1, u)
           endif
           set num_units = num_units + 1
         endif
