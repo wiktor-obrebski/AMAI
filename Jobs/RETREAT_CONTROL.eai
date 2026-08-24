@@ -156,7 +156,7 @@ if isfleeing or (town_threatened and town_threat_break) then
       if IsStandardUnit(u) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) and DistanceBetweenPoints(GetUnitLoc(u), captain_home) >= 650 then
         if GetUnitCurrentOrder(u) != OrderId("harvest") then
           // track retreating units so we don't re-add them
-          if not IsUnitInGroup(u, in_retreat_group) then
+          if not IsUnitInGroup(u, in_retreat_group) and not IsUnitInGroup(u, retreat_reset_pending) then
             call RemoveGuardPosition(u)
             call GroupAddUnit(in_retreat_group, u)
 

@@ -644,7 +644,7 @@ function attack_sequence_all takes nothing returns nothing
       call Trace("RACIAL ATTACK: exit waiting troops")
 
 //      call Trace("About to Attack")
-      call TraceAll("DBG NEW ATTACK ITERATION: ownStrength=" +Int2Str(GetOwnStrength()) +" captain=" +Int2Str(CaptainGroupSize()) +" pendingReset=" +Int2Str(BlzGroupGetSize(retreat_reset_pending)))
+      call TraceAll("DBG NEW ATTACK ITERATION: total=" + Int2Str(GetOwnStrength()) + " ready=" + Int2Str(GetOwnAttackStrength()) + " captain=" + Int2Str(CaptainGroupSize()) + " inRetreat=" + Int2Str(BlzGroupGetSize(in_retreat_group)) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
 
       call setup_force(false)
       call universal_attack_sequence()
