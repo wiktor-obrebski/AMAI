@@ -153,15 +153,15 @@ if isfleeing or (town_threatened and town_threat_break) then
       set u = FirstOfGroup(g)
       exitwhen u == null
       // Only send standard (combat) units, skip peons/structures/heroes and units in healing/rescue groups
-      if IsStandardUnit(u) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) and DistanceBetweenPoints(GetUnitLoc(u), captain_home) > 650 then
+      if IsStandardUnit(u) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) and DistanceBetweenPoints(GetUnitLoc(u), captain_home) >= 650 then
         if GetUnitCurrentOrder(u) != OrderId("harvest") then
           // track retreating units so we don't re-add them
           if not IsUnitInGroup(u, in_retreat_group) then
-              call RemoveGuardPosition(u)
-              call GroupAddUnit(in_retreat_group, u)
-              call GroupRemoveUnit(in_retreat_group, u)
-              // use p==1 to indicate forced retreat in SEND_HOME
-              call TQAddUnitJob(0, SEND_HOME, 1, u)
+            call RemoveGuardPosition(u)
+            call GroupAddUnit(in_retreat_group, u)
+
+            // use p==1 to indicate forced retreat in SEND_HOME
+            call TQAddUnitJob(0, SEND_HOME, 1, u)
           endif
           set num_units = num_units + 1
         endif

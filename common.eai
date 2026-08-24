@@ -1524,10 +1524,11 @@ endfunction
 // call SetSoundDuration( chatSound, 208 )
 
 //============================================================================
-function DisplayToAll takes string s returns nothing
+function DisplayToAll takes
+string s returns nothing
   local integer i = 0
   loop
-    call DisplayTimedTextToPlayer(Player(i),0,0,1,message_add+s)
+    call DisplayTimedTextToPlayer(Player(i),0,0,15,message_add+s)
     set i = i + 1
     exitwhen i >= GetBJMaxPlayers()
   endloop
