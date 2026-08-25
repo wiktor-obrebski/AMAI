@@ -115,7 +115,8 @@ globals
     integer trace_log_unsaved = 0
     boolean trace_log_initialized = false
 
-
+    integer creep_debug_id = 0
+    boolean ordinary_creep_attack_running = false
     // =============================================================
     // AMAI constants
     // =============================================================
@@ -1524,8 +1525,7 @@ endfunction
 // call SetSoundDuration( chatSound, 208 )
 
 //============================================================================
-function DisplayToAll takes
-string s returns nothing
+function DisplayToAll takes string s returns nothing
   local integer i = 0
   loop
     call DisplayTimedTextToPlayer(Player(i),0,0,15,message_add+s)
@@ -12816,6 +12816,7 @@ function CommonSleepUntilTargetDeadAM takes unit target, boolean iscreeping, boo
   local real gen_last_dist = -1
   local real gen_cur_dist = 0
   //local group g = null
+  local integer debug_cached_army = -1
 
   set lastcaptainx = GetUnitX(target)
   set lastcaptainy = GetUnitY(target)
@@ -12839,6 +12840,17 @@ function CommonSleepUntilTargetDeadAM takes unit target, boolean iscreeping, boo
     exitwhen not UnitAlive(target)
     exitwhen IsPlayerAlly(ai_player, GetOwningPlayer(target))
     exitwhen IsUnitInvisibleAM(target, ai_player)
+
+    if iscreeping and ordinary_creep_attack_running then
+      set debug_cached_army = -1
+
+      if main_army >= 0 then
+        set debug_cached_army = R2I(army_strength[main_army])
+      endif
+
+      call TraceAll("DBG CREEP WATCH: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " cachedArmy=" + Int2Str(debug_cached_army) + " captain=" + Int2Str(CaptainGroupSize()) + " combat=" + B2S(CaptainInCombat(true)) + " retreating=" + B2S(CaptainRetreating()) + " canFlee=" + B2S(canflee) + " fleeing=" + B2S(isfleeing) + " break=" + B2S(break_attack) + " retreatCtl=" + B2S(retreat_controlled))
+    endif
+
     if attacking_expansion and current_expansion != null and main_army >= 0 and army_loc[main_army] != null and not CaptainInCombat(true) then
       set target_loc = GetUnitLoc(target)
       set cur_dist = DistanceBetweenPoints_dd(army_loc[main_army], target_loc)
@@ -13240,25 +13252,29 @@ function CreepAttack takes integer str returns nothing
 
   set target = GetFittingCreep(target, str)
 
-  // Creep camp small is level 1 - 9
-  // Creep camp medium is level 10 - 19
-  // Creep camp strong is level 20 - 100
   if target == null then
     call Trace("No creep target found")
     call Sleep(3 * sleep_multiplier)
     return
   endif
 
+  set creep_debug_id = creep_debug_id + 1
+
   set tmp_creep_strength = GetCreepCampStrength(target)
   set enemy_near_creep = GetLocationNonCreepStrength(GetUnitX(target), GetUnitY(target), 1500)
 
-  call TraceAll("DBG CREEP SELECT: own=" + Int2Str(str) + " captain=" + Int2Str(CaptainGroupSize()) + " creep=" + Int2Str(tmp_creep_strength) + " enemyNear=" + Int2Str(enemy_near_creep))
+  call TraceAll("DBG CREEP START: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " own=" + Int2Str(str) + " captain=" + Int2Str(CaptainGroupSize()) + " creep=" + Int2Str(tmp_creep_strength) + " enemyNearCamp=" + Int2Str(enemy_near_creep) + " target=" + Int2Str(GetHandleId(target)))
 
   if air_strength > 15 then
     call SetAllianceTargetIfLeadAndChat(target, C_Creep)
   endif
 
+  set ordinary_creep_attack_running = true
   call AttackMoveKillCreep(target, true)
+  set ordinary_creep_attack_running = false
+
+  call TraceAll("DBG CREEP END: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " fleeing=" + B2S(isfleeing) + " break=" + B2S(break_attack))
+
   call ClearAllianceTarget(target)
   set target = null
 endfunction

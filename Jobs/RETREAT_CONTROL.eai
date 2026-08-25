@@ -118,6 +118,9 @@ if not retreat_controlled then
 endif
 
 if not isfleeing and canflee and (CaptainRetreating() or CaptainIsHome()) then
+  if ordinary_creep_attack_running then
+    call TraceAll("DBG CREEP NATURAL FLEE: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id))
+  endif
   call TraceAll("RETREAT_CONTROL: Natural Flee !!!")
   set isfleeing = true
 endif
@@ -262,14 +265,24 @@ if attack_running then
 
   set enemy_strength_sum = enemy_sum + creep_sum
   set ally_strength_sum = ally_sum
+
+  if ordinary_creep_attack_running and (enemy_strength_sum > 0 or CaptainInCombat(true) or CaptainRetreating()) then
+    call TraceAll("DBG CREEP RC: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " own=" + Int2Str(R2I(ally_strength_sum)) + " enemyPlusCreeps=" + Int2Str(R2I(enemy_strength_sum)) + " radius=" + Int2Str(R2I(battle_radius)) + " combat=" + B2S(CaptainInCombat(true)) + " retreating=" + B2S(CaptainRetreating()) + " canFlee=" + B2S(canflee))
+  endif
   call Trace("RETREAT_CONTROL: Our strength: " + Real2Str(ally_strength_sum) + " Enemy strength: " + Real2Str(enemy_strength_sum))
 
   if CaptainInCombat(true) and not desperation_assault and (enemy_strength_sum > ApplyFleeStrengthModifier(ally_strength_sum, true) or (town_threatened and town_threat_break and attack_running) or ally_strength_sum == 0) then
+    if ordinary_creep_attack_running then
+      call TraceAll("DBG CREEP FORCED FLEE: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " own=" + Int2Str(R2I(ally_strength_sum)) + " enemy=" + Int2Str(R2I(enemy_strength_sum)))
+    endif
     call TraceAll("RETREAT_CONTROL: Flee!!!!")
     set break_attack = attack_running
     call CaptainGoHome()
     set isfleeing = true
   elseif CaptainInCombat(true) and not desperation_assault and (enemy_strength_sum > ApplyFleeStrengthModifier(ally_strength_sum, false) or (battle_radius == creep_battle_radius and enemy_strength_sum > ally_strength_sum )) then
+    if ordinary_creep_attack_running then
+     call TraceAll("DBG CREEP ALLOWED FLEE: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " own=" + Int2Str(R2I(ally_strength_sum)) + " enemy=" + Int2Str(R2I(enemy_strength_sum)))
+    endif
     call TraceAll("RETREAT_CONTROL: Allowed to Flee")
     call SetGroupsFlee(true)
     set canflee = true
