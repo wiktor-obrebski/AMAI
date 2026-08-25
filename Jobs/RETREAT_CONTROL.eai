@@ -50,6 +50,10 @@ function RetreatControlJob takes nothing returns nothing
   local integer ally_count = 0
   local integer enemy_count = 0
   local boolean usearmy = true
+  local real debug_local_own_sum = 0
+  local integer debug_local_own_count = 0
+  local real debug_cached_main_strength = -1
+
   call DisplayToAllJobDebug("RETREAT_CONTROL JOB Start")
 
   if major_hero == null or not UnitAlive(major_hero) then
@@ -198,6 +202,7 @@ if attack_running then
   else
     call GroupEnumUnitsInRange(g, GetLocationX(army_loc[main_army]), GetLocationY(army_loc[main_army]), battle_radius, null)
     set usearmy = true
+    set debug_cached_main_strength = army_strength[main_army]
     set ally_sum = ally_sum + army_strength[main_army]
   endif
   set g = SelectUnittype(g, UNIT_TYPE_STRUCTURE, false)
@@ -210,6 +215,14 @@ if attack_running then
     set u = FirstOfGroup(g)
     exitwhen u == null  
     set unit_strength = GetUnitStrength(u)
+
+    // Diagnostic only: actual own combat strength physically inside battle_radius.
+    if GetOwningPlayer(u) == ai_player and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitInGroup(u, unit_healing) and not IsRetreatUnavailableForAttack(u) then
+
+      set debug_local_own_sum = debug_local_own_sum + unit_strength
+      set debug_local_own_count = debug_local_own_count + 1
+    endif
+
     if (ModuloInteger(i, 200) == 0) then
       call Sleep(0.1)
     endif
@@ -267,7 +280,7 @@ if attack_running then
   set ally_strength_sum = ally_sum
 
   if ordinary_creep_attack_running and (enemy_strength_sum > 0 or CaptainInCombat(true) or CaptainRetreating()) then
-    call TraceAll("DBG CREEP RC: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " own=" + Int2Str(R2I(ally_strength_sum)) + " enemyPlusCreeps=" + Int2Str(R2I(enemy_strength_sum)) + " radius=" + Int2Str(R2I(battle_radius)) + " combat=" + B2S(CaptainInCombat(true)) + " retreating=" + B2S(CaptainRetreating()) + " canFlee=" + B2S(canflee))
+    call TraceAll("DBG CREEP RC: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " ownUsed=" + Int2Str(R2I(ally_strength_sum)) + " cachedMain=" + Int2Str(R2I(debug_cached_main_strength)) + " localOwn=" + Int2Str(R2I(debug_local_own_sum)) + " localUnits=" + Int2Str(debug_local_own_count) + " enemyPlusCreeps=" + Int2Str(R2I(enemy_strength_sum)) + " radius=" + Int2Str(R2I(battle_radius)) + " combat=" + B2S(CaptainInCombat(true)) + " retreating=" + B2S(CaptainRetreating()) + " canFlee=" + B2S(canflee))
   endif
   call Trace("RETREAT_CONTROL: Our strength: " + Real2Str(ally_strength_sum) + " Enemy strength: " + Real2Str(enemy_strength_sum))
 
