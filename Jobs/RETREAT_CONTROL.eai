@@ -24,58 +24,7 @@
     integer debug_retreat_run_seq = 0
 
     group debug_flee_candidate_group = CreateGroup()
-    group debug_flee_watch_group = CreateGroup()
-    boolean debug_flee_watch_running = false
 #ELSE
-
-function DebugFleeWatchThread takes nothing returns nothing
-  local integer sample = 0
-  local integer alive = 0
-  local integer start_alive = -1
-  local real alive_strength = 0
-  local real start_strength = 0
-  local group g = null
-  local unit u = null
-
-  loop
-    exitwhen sample >= 16
-    exitwhen not retreat_controlled or not canflee or isfleeing
-
-    set alive = 0
-    set alive_strength = 0
-    set g = CopyGroup(debug_flee_watch_group)
-
-    loop
-      set u = FirstOfGroup(g)
-      exitwhen u == null
-
-      if UnitAlive(u) then
-        set alive = alive + 1
-        set alive_strength = alive_strength + GetUnitStrength(u)
-      endif
-
-      call GroupRemoveUnit(g, u)
-    endloop
-
-    call DestroyGroup(g)
-    set g = null
-
-    if start_alive < 0 then
-      set start_alive = alive
-      set start_strength = alive_strength
-    endif
-
-    call TraceAll(      "DBG FLEE WATCH:"      + " sample=" + Int2Str(sample)      + " alive=" + Int2Str(alive)      + " startAlive=" + Int2Str(start_alive)      + " lost=" + Int2Str(start_alive - alive)      + " strength=" + Int2Str(R2I(alive_strength))      + " startStrength=" + Int2Str(R2I(start_strength))      + " captain=" + Int2Str(CaptainGroupSize())      + " combat=" + B2S(CaptainInCombat(true))      + " retreating=" + B2S(CaptainRetreating())      + " canFlee=" + B2S(canflee)      + " fleeing=" + B2S(isfleeing)      + " retreatCtl=" + B2S(retreat_controlled))
-
-    set sample = sample + 1
-    call Sleep(0.5)
-  endloop
-
-  call TraceAll("DBG FLEE WATCH END:"    + " samples=" + Int2Str(sample)    + " retreating=" + B2S(CaptainRetreating())    + " canFlee=" + B2S(canflee)    + " fleeing=" + B2S(isfleeing)    + " retreatCtl=" + B2S(retreat_controlled))
-
-  set debug_flee_watch_running = false
-  set u = null
-endfunction
 
 //============================================================================
 // Retreat Control Job //Updated by Strategy Master 26/07/05
@@ -111,7 +60,6 @@ function RetreatControlJob takes nothing returns nothing
   local real debug_cached_main_strength = -1
   local integer debug_run_id = 0
   local integer debug_start_epoch = 0
-  local boolean debug_start_flee_watch = false
 
   set debug_retreat_run_seq = debug_retreat_run_seq + 1
   set debug_run_id = debug_retreat_run_seq
@@ -380,18 +328,9 @@ if attack_running then
     call TraceAll("RETREAT_CONTROL: Allowed to Flee")
     if not canflee then
       call TraceAll("DBG FLEE ALLOW START:"        + " run=" + Int2Str(debug_run_id)        + " own=" + Int2Str(R2I(ally_strength_sum))        + " enemy=" + Int2Str(R2I(enemy_strength_sum))        + " localOwn=" + Int2Str(R2I(debug_local_own_sum))        + " localUnits=" + Int2Str(debug_local_own_count)        + " captain=" + Int2Str(CaptainGroupSize())        + " combat=" + B2S(CaptainInCombat(true))        + " retreating=" + B2S(CaptainRetreating()))
-
-      call GroupClear(debug_flee_watch_group)
-      call BlzGroupAddGroupFast(debug_flee_candidate_group, debug_flee_watch_group)
-
-      set debug_start_flee_watch = true
     endif
     call SetGroupsFlee(true)
     set canflee = true
-    if debug_start_flee_watch and not debug_flee_watch_running then
-      set debug_flee_watch_running = true
-      call StartThread(function DebugFleeWatchThread)
-    endif
   else
     if canflee then
       call TraceAll(    "DBG FLEE ALLOW CANCEL:"    + " run=" + Int2Str(debug_run_id)    + " own=" + Int2Str(R2I(ally_strength_sum))    + " enemy=" + Int2Str(R2I(enemy_strength_sum))    + " captain=" + Int2Str(CaptainGroupSize())    + " combat=" + B2S(CaptainInCombat(true))    + " retreating=" + B2S(CaptainRetreating()))

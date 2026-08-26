@@ -12632,8 +12632,8 @@ function EnableRetreatControl takes nothing returns nothing
   set break_attack = false
   if not retreat_controlled then
     call Trace("===Retreat control started===")
+    set debug_retreat_epoch = debug_retreat_epoch + 1
     set retreat_controlled = true
-
     call TraceAll(      "DBG RC ENABLE:"      + " epoch=" + Int2Str(debug_retreat_epoch)      + " fleeing=" + B2S(isfleeing)      + " canFlee=" + B2S(canflee)      + " attackRunning=" + B2S(attack_running))
 
     call SetGroupsFlee(false)
