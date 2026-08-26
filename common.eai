@@ -1723,7 +1723,7 @@ endfunction
 
 function TraceAll takes string s returns nothing
   // if debugging == 1 then
-  call TraceLog(s)
+  call TraceLog("tms=" + Int2Str(R2I(TimerGetElapsed(tq_timer) * 1000)) + " " + s)
   // endif
 endfunction
 
@@ -12633,6 +12633,9 @@ function EnableRetreatControl takes nothing returns nothing
   if not retreat_controlled then
     call Trace("===Retreat control started===")
     set retreat_controlled = true
+
+    call TraceAll(      "DBG RC ENABLE:"      + " epoch=" + Int2Str(debug_retreat_epoch)      + " fleeing=" + B2S(isfleeing)      + " canFlee=" + B2S(canflee)      + " attackRunning=" + B2S(attack_running))
+
     call SetGroupsFlee(false)
     call SetTargetHeroes(false)
     call TQAddJob(2 * sleep_multiplier, RETREAT_CONTROL, 0)
@@ -12732,6 +12735,9 @@ function SleepInCombatAM takes boolean ally_override returns nothing
         endif
         if true or CaptainAtGoal() or (attack_length_counter == 0 and not CaptainInCombat(true)) or CaptainInCombat(true) or ally_override or c_ally_total == 0 then
           call TraceAll("DBG RAW ATTACK: SleepInCombat captain=" + Int2Str(CaptainGroupSize()) + " fleeing=" + B2S(isfleeing) + " retreatCtl=" + B2S(retreat_controlled))
+        if canflee and not isfleeing then
+          call TraceAll("DBG ATTACK REISSUE WHILE CANFLEE:"            + " source=SleepInCombat"            + " captain=" + Int2Str(CaptainGroupSize())            + " combat=" + B2S(CaptainInCombat(true))            + " retreating=" + B2S(CaptainRetreating())            + " attackRunning=" + B2S(attack_running))
+        endif
           call AttackMoveKill(u) // Use existing troops
         elseif (c_ally_total > 0 and not ally_override) then
           call CaptainAttack(GetUnitX(u), GetUnitY(u)) // Override hardcoded logic with attackmovekill as ally targets will change the attackmovekill we wanted. Teleport ignores the ally control.
@@ -12848,7 +12854,7 @@ function CommonSleepUntilTargetDeadAM takes unit target, boolean iscreeping, boo
         set debug_cached_army = R2I(army_strength[main_army])
       endif
 
-      call TraceAll("DBG CREEP WATCH: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " cachedArmy=" + Int2Str(debug_cached_army) + " captain=" + Int2Str(CaptainGroupSize()) + " combat=" + B2S(CaptainInCombat(true)) + " retreating=" + B2S(CaptainRetreating()) + " canFlee=" + B2S(canflee) + " fleeing=" + B2S(isfleeing) + " break=" + B2S(break_attack) + " retreatCtl=" + B2S(retreat_controlled))
+      call TraceAll("DBG CREEP WATCH: id=" + Int2Str(creep_debug_id) + " cachedArmy=" + Int2Str(debug_cached_army) + " captain=" + Int2Str(CaptainGroupSize()) + " combat=" + B2S(CaptainInCombat(true)) + " retreating=" + B2S(CaptainRetreating()) + " canFlee=" + B2S(canflee) + " fleeing=" + B2S(isfleeing) + " break=" + B2S(break_attack) + " retreatCtl=" + B2S(retreat_controlled))
     endif
 
     if attacking_expansion and current_expansion != null and main_army >= 0 and army_loc[main_army] != null and not CaptainInCombat(true) then
@@ -12936,6 +12942,9 @@ function CommonSleepUntilTargetDeadAM takes unit target, boolean iscreeping, boo
       set lastcaptainy = GetUnitY(target)  
       if true or CaptainAtGoal() or (attack_length_counter == 0 and not CaptainInCombat(true)) or CaptainInCombat(true) or ally_override or c_ally_total == 0 then
         call TraceAll("DBG RAW ATTACK: CommonSleepUntilTargetDead captain=" + Int2Str(CaptainGroupSize()) + " break=" + B2S(break_attack) + " desperation=" + B2S(desperation_assault) + " attackRunning=" + B2S(attack_running) + " fleeing=" + B2S(isfleeing) + " retreatCtl=" + B2S(retreat_controlled))
+        if canflee and not isfleeing then
+          call TraceAll("DBG ATTACK REISSUE WHILE CANFLEE:"            + " source=CommonSleepUntilTargetDead"            + " captain=" + Int2Str(CaptainGroupSize())            + " combat=" + B2S(CaptainInCombat(true))            + " retreating=" + B2S(CaptainRetreating())            + " attackRunning=" + B2S(attack_running))
+        endif
         call AttackMoveKill(target) // use attack length counter to do an ocassional attack move incase enemies nearby
       elseif (c_ally_total > 0 and not ally_override) then // CURRENTLY DISABLED AS FIGHTS WITH ABOVE, NEED NEW COMBAT ATTACK MOVE FUNCTION
         call CaptainAttack(GetUnitX(target), GetUnitY(target)) // Override hardcoded logic from attackmovekill which will help allies, but this is not an attack move operation
@@ -13263,7 +13272,7 @@ function CreepAttack takes integer str returns nothing
   set tmp_creep_strength = GetCreepCampStrength(target)
   set enemy_near_creep = GetLocationNonCreepStrength(GetUnitX(target), GetUnitY(target), 1500)
 
-  call TraceAll("DBG CREEP START: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " own=" + Int2Str(str) + " captain=" + Int2Str(CaptainGroupSize()) + " creep=" + Int2Str(tmp_creep_strength) + " enemyNearCamp=" + Int2Str(enemy_near_creep) + " target=" + Int2Str(GetHandleId(target)))
+  call TraceAll("DBG CREEP START: id=" + Int2Str(creep_debug_id) + " own=" + Int2Str(str) + " captain=" + Int2Str(CaptainGroupSize()) + " creep=" + Int2Str(tmp_creep_strength) + " enemyNearCamp=" + Int2Str(enemy_near_creep) + " target=" + Int2Str(GetHandleId(target)))
 
   if air_strength > 15 then
     call SetAllianceTargetIfLeadAndChat(target, C_Creep)
@@ -13273,7 +13282,7 @@ function CreepAttack takes integer str returns nothing
   call AttackMoveKillCreep(target, true)
   set ordinary_creep_attack_running = false
 
-  call TraceAll("DBG CREEP END: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " fleeing=" + B2S(isfleeing) + " break=" + B2S(break_attack))
+  call TraceAll("DBG CREEP END: id=" + Int2Str(creep_debug_id) + " fleeing=" + B2S(isfleeing) + " break=" + B2S(break_attack))
 
   call ClearAllianceTarget(target)
   set target = null

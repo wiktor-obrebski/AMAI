@@ -19,7 +19,63 @@
     location last_enemy_loc = Location(0,0)
     location ally_loc = Location(0,0)
     location last_ally_loc = Location(0,0)
+
+    integer debug_retreat_epoch = 0
+    integer debug_retreat_run_seq = 0
+
+    group debug_flee_candidate_group = CreateGroup()
+    group debug_flee_watch_group = CreateGroup()
+    boolean debug_flee_watch_running = false
 #ELSE
+
+function DebugFleeWatchThread takes nothing returns nothing
+  local integer sample = 0
+  local integer alive = 0
+  local integer start_alive = -1
+  local real alive_strength = 0
+  local real start_strength = 0
+  local group g = null
+  local unit u = null
+
+  loop
+    exitwhen sample >= 16
+    exitwhen not retreat_controlled or not canflee or isfleeing
+
+    set alive = 0
+    set alive_strength = 0
+    set g = CopyGroup(debug_flee_watch_group)
+
+    loop
+      set u = FirstOfGroup(g)
+      exitwhen u == null
+
+      if UnitAlive(u) then
+        set alive = alive + 1
+        set alive_strength = alive_strength + GetUnitStrength(u)
+      endif
+
+      call GroupRemoveUnit(g, u)
+    endloop
+
+    call DestroyGroup(g)
+    set g = null
+
+    if start_alive < 0 then
+      set start_alive = alive
+      set start_strength = alive_strength
+    endif
+
+    call TraceAll(      "DBG FLEE WATCH:"      + " sample=" + Int2Str(sample)      + " alive=" + Int2Str(alive)      + " startAlive=" + Int2Str(start_alive)      + " lost=" + Int2Str(start_alive - alive)      + " strength=" + Int2Str(R2I(alive_strength))      + " startStrength=" + Int2Str(R2I(start_strength))      + " captain=" + Int2Str(CaptainGroupSize())      + " combat=" + B2S(CaptainInCombat(true))      + " retreating=" + B2S(CaptainRetreating())      + " canFlee=" + B2S(canflee)      + " fleeing=" + B2S(isfleeing)      + " retreatCtl=" + B2S(retreat_controlled))
+
+    set sample = sample + 1
+    call Sleep(0.5)
+  endloop
+
+  call TraceAll("DBG FLEE WATCH END:"    + " samples=" + Int2Str(sample)    + " retreating=" + B2S(CaptainRetreating())    + " canFlee=" + B2S(canflee)    + " fleeing=" + B2S(isfleeing)    + " retreatCtl=" + B2S(retreat_controlled))
+
+  set debug_flee_watch_running = false
+  set u = null
+endfunction
 
 //============================================================================
 // Retreat Control Job //Updated by Strategy Master 26/07/05
@@ -53,6 +109,17 @@ function RetreatControlJob takes nothing returns nothing
   local real debug_local_own_sum = 0
   local integer debug_local_own_count = 0
   local real debug_cached_main_strength = -1
+  local integer debug_run_id = 0
+  local integer debug_start_epoch = 0
+  local boolean debug_start_flee_watch = false
+
+  set debug_retreat_run_seq = debug_retreat_run_seq + 1
+  set debug_run_id = debug_retreat_run_seq
+  set debug_start_epoch = debug_retreat_epoch
+
+  if canflee or isfleeing then
+    call TraceAll("DBG RC ENTER:"      + " run=" + Int2Str(debug_run_id)      + " epoch=" + Int2Str(debug_start_epoch)      + " canFlee=" + B2S(canflee)      + " fleeing=" + B2S(isfleeing)      + " retreatCtl=" + B2S(retreat_controlled)      + " captainRetreating=" + B2S(CaptainRetreating()))
+  endif
 
   call DisplayToAllJobDebug("RETREAT_CONTROL JOB Start")
 
@@ -123,9 +190,10 @@ endif
 
 if not isfleeing and canflee and (CaptainRetreating() or CaptainIsHome()) then
   if ordinary_creep_attack_running then
-    call TraceAll("DBG CREEP NATURAL FLEE: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id))
+    call TraceAll("DBG CREEP NATURAL FLEE: id=" + Int2Str(creep_debug_id))
   endif
   call TraceAll("RETREAT_CONTROL: Natural Flee !!!")
+  call TraceAll(    "DBG FLEE WRITE:"    + " run=" + Int2Str(debug_run_id)    + " reason=NATURAL"    + " old=false new=true"    + " epoch=" + Int2Str(debug_retreat_epoch)    + " retreatCtl=" + B2S(retreat_controlled)    + " captainRetreating=" + B2S(CaptainRetreating())    + " captainHome=" + B2S(CaptainIsHome()))
   set isfleeing = true
 endif
 
@@ -135,11 +203,16 @@ if ((not attack_running and not isfleeing) or isfleeing or (town_threatened and 
     if CaptainIsHome() or retreat_end_switch or (not attack_running and not isfleeing) or player_defeated or (main_army >= 0 and DistanceBetweenPoints(army_loc[main_army], captain_home) <= 750) then
       call TraceAll("===Retreat control ended===")
       call TraceAll("DBG RETREAT END: captain=" + Int2Str(CaptainGroupSize()) + " break=" + B2S(break_attack) + " desperation=" + B2S(desperation_assault) + " attackRunning=" + B2S(attack_running) + " captainHome=" + B2S(CaptainIsHome()) + " captainRetreating=" + B2S(CaptainRetreating()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
+      if isfleeing then
+        call TraceAll(          "DBG FLEE WRITE:"          + " run=" + Int2Str(debug_run_id)          + " reason=RETREAT_END"          + " old=true new=false"          + " epoch=" + Int2Str(debug_retreat_epoch))
+      endif
       set retreat_controlled = false
+      set debug_retreat_epoch = debug_retreat_epoch + 1
       set canflee = false
       set isfleeing = false     // home so no need to be retreating. Also prevents bug in the captainretreating condition
       set retreat_end_switch = false
       call SetGroupsFlee(false)
+      call TraceAll(        "DBG RC DISABLE:"        + " run=" + Int2Str(debug_run_id)        + " epoch=" + Int2Str(debug_retreat_epoch)        + " fleeing=" + B2S(isfleeing)        + " canFlee=" + B2S(canflee))
       return
     else
       call SetGroupsFlee(true)
@@ -189,6 +262,8 @@ if isfleeing then
   return
 endif
 
+call GroupClear(debug_flee_candidate_group)
+
 if attack_running then
 
   set g = CreateGroup()
@@ -218,13 +293,16 @@ if attack_running then
 
     // Diagnostic only: actual own combat strength physically inside battle_radius.
     if GetOwningPlayer(u) == ai_player and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitInGroup(u, unit_healing) and not IsRetreatUnavailableForAttack(u) then
-
       set debug_local_own_sum = debug_local_own_sum + unit_strength
       set debug_local_own_count = debug_local_own_count + 1
+      call GroupAddUnit(debug_flee_candidate_group, u)
     endif
 
     if (ModuloInteger(i, 200) == 0) then
       call Sleep(0.1)
+      if debug_start_epoch != debug_retreat_epoch or not retreat_controlled then
+        call TraceAll(        "DBG RC STALE RESUME:"          + " run=" + Int2Str(debug_run_id)          + " startEpoch=" + Int2Str(debug_start_epoch)          + " currentEpoch=" + Int2Str(debug_retreat_epoch)          + " retreatCtl=" + B2S(retreat_controlled)          + " canFlee=" + B2S(canflee)          + " fleeing=" + B2S(isfleeing))
+      endif
     endif
     // set unit_life = GetUnitState(u, UNIT_STATE_LIFE)
     // set unit_mana = GetUnitState(u, UNIT_STATE_MANA)
@@ -280,27 +358,48 @@ if attack_running then
   set ally_strength_sum = ally_sum
 
   if ordinary_creep_attack_running and (enemy_strength_sum > 0 or CaptainInCombat(true) or CaptainRetreating()) then
-    call TraceAll("DBG CREEP RC: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " ownUsed=" + Int2Str(R2I(ally_strength_sum)) + " cachedMain=" + Int2Str(R2I(debug_cached_main_strength)) + " localOwn=" + Int2Str(R2I(debug_local_own_sum)) + " localUnits=" + Int2Str(debug_local_own_count) + " enemyPlusCreeps=" + Int2Str(R2I(enemy_strength_sum)) + " radius=" + Int2Str(R2I(battle_radius)) + " combat=" + B2S(CaptainInCombat(true)) + " retreating=" + B2S(CaptainRetreating()) + " canFlee=" + B2S(canflee))
+    call TraceAll("DBG CREEP RC: id=" + Int2Str(creep_debug_id) + " ownUsed=" + Int2Str(R2I(ally_strength_sum)) + " cachedMain=" + Int2Str(R2I(debug_cached_main_strength)) + " localOwn=" + Int2Str(R2I(debug_local_own_sum)) + " localUnits=" + Int2Str(debug_local_own_count) + " enemyPlusCreeps=" + Int2Str(R2I(enemy_strength_sum)) + " radius=" + Int2Str(R2I(battle_radius)) + " combat=" + B2S(CaptainInCombat(true)) + " retreating=" + B2S(CaptainRetreating()) + " canFlee=" + B2S(canflee))
   endif
   call Trace("RETREAT_CONTROL: Our strength: " + Real2Str(ally_strength_sum) + " Enemy strength: " + Real2Str(enemy_strength_sum))
 
   if CaptainInCombat(true) and not desperation_assault and (enemy_strength_sum > ApplyFleeStrengthModifier(ally_strength_sum, true) or (town_threatened and town_threat_break and attack_running) or ally_strength_sum == 0) then
     if ordinary_creep_attack_running then
-      call TraceAll("DBG CREEP FORCED FLEE: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " own=" + Int2Str(R2I(ally_strength_sum)) + " enemy=" + Int2Str(R2I(enemy_strength_sum)))
+      call TraceAll("DBG CREEP FORCED FLEE: id=" + Int2Str(creep_debug_id) + " own=" + Int2Str(R2I(ally_strength_sum)) + " enemy=" + Int2Str(R2I(enemy_strength_sum)))
     endif
     call TraceAll("RETREAT_CONTROL: Flee!!!!")
     set break_attack = attack_running
     call CaptainGoHome()
+    if not isfleeing then
+      call TraceAll(        "DBG FLEE WRITE:"        + " run=" + Int2Str(debug_run_id)        + " reason=FORCED"        + " old=false new=true"        + " epoch=" + Int2Str(debug_retreat_epoch)        + " retreatCtl=" + B2S(retreat_controlled)        + " captainRetreating=" + B2S(CaptainRetreating()))
+    endif
     set isfleeing = true
   elseif CaptainInCombat(true) and not desperation_assault and (enemy_strength_sum > ApplyFleeStrengthModifier(ally_strength_sum, false) or (battle_radius == creep_battle_radius and enemy_strength_sum > ally_strength_sum )) then
     if ordinary_creep_attack_running then
-     call TraceAll("DBG CREEP ALLOWED FLEE: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " own=" + Int2Str(R2I(ally_strength_sum)) + " enemy=" + Int2Str(R2I(enemy_strength_sum)))
+     call TraceAll("DBG CREEP ALLOWED FLEE: id=" + Int2Str(creep_debug_id) + " own=" + Int2Str(R2I(ally_strength_sum)) + " enemy=" + Int2Str(R2I(enemy_strength_sum)))
     endif
     call TraceAll("RETREAT_CONTROL: Allowed to Flee")
+    if not canflee then
+      call TraceAll("DBG FLEE ALLOW START:"        + " run=" + Int2Str(debug_run_id)        + " own=" + Int2Str(R2I(ally_strength_sum))        + " enemy=" + Int2Str(R2I(enemy_strength_sum))        + " localOwn=" + Int2Str(R2I(debug_local_own_sum))        + " localUnits=" + Int2Str(debug_local_own_count)        + " captain=" + Int2Str(CaptainGroupSize())        + " combat=" + B2S(CaptainInCombat(true))        + " retreating=" + B2S(CaptainRetreating()))
+
+      call GroupClear(debug_flee_watch_group)
+      call BlzGroupAddGroupFast(debug_flee_candidate_group, debug_flee_watch_group)
+
+      set debug_start_flee_watch = true
+    endif
     call SetGroupsFlee(true)
     set canflee = true
+    if debug_start_flee_watch and not debug_flee_watch_running then
+      set debug_flee_watch_running = true
+      call StartThread(function DebugFleeWatchThread)
+    endif
   else
+    if canflee then
+      call TraceAll(    "DBG FLEE ALLOW CANCEL:"    + " run=" + Int2Str(debug_run_id)    + " own=" + Int2Str(R2I(ally_strength_sum))    + " enemy=" + Int2Str(R2I(enemy_strength_sum))    + " captain=" + Int2Str(CaptainGroupSize())    + " combat=" + B2S(CaptainInCombat(true))    + " retreating=" + B2S(CaptainRetreating()))
+    endif
     call SetGroupsFlee(false) // Prevent natural fleeing
+    if isfleeing then
+      call TraceAll(        "DBG FLEE WRITE:"        + " run=" + Int2Str(debug_run_id)        + " reason=NO_FLEE"        + " old=true new=false"        + " epoch=" + Int2Str(debug_retreat_epoch)        + " retreatCtl=" + B2S(retreat_controlled))
+    endif
     set isfleeing = false
     set canflee = false
   endif
