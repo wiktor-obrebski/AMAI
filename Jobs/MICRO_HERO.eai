@@ -98,6 +98,9 @@ function GoHomeIfMainHero takes unit u, real x, real y returns nothing
     call CaptainGoHome() // Retreat attack captain. 
     call TeleportCaptain(x, y)
     set break_attack = attack_running
+    if not isfleeing then
+      call TraceAll("DBG FLEE WRITE: source=GoHomeIfMainHero old=false new=true retreatCtl=" + B2S(retreat_controlled) + " canFlee=" + B2S(canflee) + " captainRetreating=" + B2S(CaptainRetreating()))
+    endif
     set isfleeing = true
     set attack_running = false
   endif

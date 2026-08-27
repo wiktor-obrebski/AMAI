@@ -151,12 +151,13 @@ if ((not attack_running and not isfleeing) or isfleeing or (town_threatened and 
     if CaptainIsHome() or retreat_end_switch or (not attack_running and not isfleeing) or player_defeated or (main_army >= 0 and DistanceBetweenPoints(army_loc[main_army], captain_home) <= 750) then
       call TraceAll("===Retreat control ended===")
       call TraceAll("DBG RETREAT END: captain=" + Int2Str(CaptainGroupSize()) + " break=" + B2S(break_attack) + " desperation=" + B2S(desperation_assault) + " attackRunning=" + B2S(attack_running) + " captainHome=" + B2S(CaptainIsHome()) + " captainRetreating=" + B2S(CaptainRetreating()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
-      if isfleeing then
-        call TraceAll(          "DBG FLEE WRITE:"          + " run=" + Int2Str(debug_run_id)          + " reason=RETREAT_END"          + " old=true new=false"          + " epoch=" + Int2Str(debug_retreat_epoch))
-      endif
+
       set retreat_controlled = false
       set debug_retreat_epoch = debug_retreat_epoch + 1
       set canflee = false
+      if isfleeing then
+        call TraceAll(          "DBG FLEE WRITE:"          + " run=" + Int2Str(debug_run_id)          + " reason=RETREAT_END"          + " old=true new=false"          + " epoch=" + Int2Str(debug_retreat_epoch))
+      endif
       set isfleeing = false     // home so no need to be retreating. Also prevents bug in the captainretreating condition
       set retreat_end_switch = false
       call SetGroupsFlee(false)

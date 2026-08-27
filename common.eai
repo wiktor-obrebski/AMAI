@@ -12733,15 +12733,16 @@ function SleepInCombatAM takes boolean ally_override returns nothing
             set attack_length_counter = 0
             call FormGroupAM(0)
         endif
-        if true or CaptainAtGoal() or (attack_length_counter == 0 and not CaptainInCombat(true)) or CaptainInCombat(true) or ally_override or c_ally_total == 0 then
-          call TraceAll("DBG RAW ATTACK: SleepInCombat captain=" + Int2Str(CaptainGroupSize()) + " fleeing=" + B2S(isfleeing) + " retreatCtl=" + B2S(retreat_controlled))
-        if canflee and not isfleeing then
-          call TraceAll("DBG ATTACK REISSUE WHILE CANFLEE:"            + " source=SleepInCombat"            + " captain=" + Int2Str(CaptainGroupSize())            + " combat=" + B2S(CaptainInCombat(true))            + " retreating=" + B2S(CaptainRetreating())            + " attackRunning=" + B2S(attack_running))
+        if not canflee then
+          if true or CaptainAtGoal() or (attack_length_counter == 0 and not CaptainInCombat(true)) or CaptainInCombat(true) or ally_override or c_ally_total == 0 then
+            call TraceAll("DBG RAW ATTACK: SleepInCombat captain=" + Int2Str(CaptainGroupSize()) + " fleeing=" + B2S(isfleeing) + " retreatCtl=" + B2S(retreat_controlled))
+            call AttackMoveKill(u)
+          elseif (c_ally_total > 0 and not ally_override) then
+            call CaptainAttack(GetUnitX(u), GetUnitY(u))
+          endif
+        elseif not isfleeing then
+          call TraceAll("DBG ATTACK SUPPRESSED WHILE CANFLEE: source=SleepInCombat captain=" + Int2Str(CaptainGroupSize()) + " combat=" + B2S(CaptainInCombat(true)) + " retreating=" + B2S(CaptainRetreating()) + " attackRunning=" + B2S(attack_running))
         endif
-          call AttackMoveKill(u) // Use existing troops
-        elseif (c_ally_total > 0 and not ally_override) then
-          call CaptainAttack(GetUnitX(u), GetUnitY(u)) // Override hardcoded logic with attackmovekill as ally targets will change the attackmovekill we wanted. Teleport ignores the ally control.
-        endif  
         call CreateDebugTag("Combat sleep attack", 10, u, 1.00, 0.80)
       endif
       exitwhen (not CaptainInCombat(true) or CaptainRetreating() or CaptainIsHome()) and count > 180  // Fail safe using hardcoded checks
@@ -12926,10 +12927,14 @@ function CommonSleepUntilTargetDeadAM takes unit target, boolean iscreeping, boo
       set lastcaptainx = GetLocationX(ally_loc)
       set lastcaptainy = GetLocationY(ally_loc)
       //call SetCaptainHome(, lastcaptainx, lastcaptainy)
-      if true or CaptainAtGoal() or attack_length_counter == 0 or CaptainInCombat(true) or ally_override or c_ally_total == 0 then
-        call AttackMoveXY(R2I(GetLocationX(ally_loc)), R2I(GetLocationY(ally_loc))) 
-      elseif (c_ally_total > 0 and not ally_override) then
-        call CaptainAttack(GetLocationX(ally_loc), GetLocationY(ally_loc)) // Override and help nearby ally
+      if not canflee then
+        if true or CaptainAtGoal() or attack_length_counter == 0 or CaptainInCombat(true) or ally_override or c_ally_total == 0 then
+          call AttackMoveXY(R2I(GetLocationX(ally_loc)), R2I(GetLocationY(ally_loc)))
+        elseif (c_ally_total > 0 and not ally_override) then
+          call CaptainAttack(GetLocationX(ally_loc), GetLocationY(ally_loc))
+        endif
+      elseif not isfleeing then
+        call TraceAll("DBG ATTACK SUPPRESSED WHILE CANFLEE: source=CommonSleepUntilTargetDeadAlly captain=" + Int2Str(CaptainGroupSize()) + " combat=" + B2S(CaptainInCombat(true)) + " retreating=" + B2S(CaptainRetreating()) + " attackRunning=" + B2S(attack_running))
       endif
       call CreateDebugTagLoc("Reform near ally", 10, GetLocationX(ally_loc), GetLocationY(ally_loc), 1.00, 0.80)
     else
@@ -12939,16 +12944,17 @@ function CommonSleepUntilTargetDeadAM takes unit target, boolean iscreeping, boo
         set target = ally_target
       endif
       set lastcaptainx = GetUnitX(target)
-      set lastcaptainy = GetUnitY(target)  
-      if true or CaptainAtGoal() or (attack_length_counter == 0 and not CaptainInCombat(true)) or CaptainInCombat(true) or ally_override or c_ally_total == 0 then
-        call TraceAll("DBG RAW ATTACK: CommonSleepUntilTargetDead captain=" + Int2Str(CaptainGroupSize()) + " break=" + B2S(break_attack) + " desperation=" + B2S(desperation_assault) + " attackRunning=" + B2S(attack_running) + " fleeing=" + B2S(isfleeing) + " retreatCtl=" + B2S(retreat_controlled))
-        if canflee and not isfleeing then
-          call TraceAll("DBG ATTACK REISSUE WHILE CANFLEE:"            + " source=CommonSleepUntilTargetDead"            + " captain=" + Int2Str(CaptainGroupSize())            + " combat=" + B2S(CaptainInCombat(true))            + " retreating=" + B2S(CaptainRetreating())            + " attackRunning=" + B2S(attack_running))
+      set lastcaptainy = GetUnitY(target)
+      if not canflee then
+        if true or CaptainAtGoal() or (attack_length_counter == 0 and not CaptainInCombat(true)) or CaptainInCombat(true) or ally_override or c_ally_total == 0 then
+          call TraceAll("DBG RAW ATTACK: CommonSleepUntilTargetDead captain=" + Int2Str(CaptainGroupSize()) + " break=" + B2S(break_attack) + " desperation=" + B2S(desperation_assault) + " attackRunning=" + B2S(attack_running) + " fleeing=" + B2S(isfleeing) + " retreatCtl=" + B2S(retreat_controlled))
+          call AttackMoveKill(target)
+        elseif (c_ally_total > 0 and not ally_override) then
+          call CaptainAttack(GetUnitX(target), GetUnitY(target))
         endif
-        call AttackMoveKill(target) // use attack length counter to do an ocassional attack move incase enemies nearby
-      elseif (c_ally_total > 0 and not ally_override) then // CURRENTLY DISABLED AS FIGHTS WITH ABOVE, NEED NEW COMBAT ATTACK MOVE FUNCTION
-        call CaptainAttack(GetUnitX(target), GetUnitY(target)) // Override hardcoded logic from attackmovekill which will help allies, but this is not an attack move operation
-      endif  
+      elseif not isfleeing then
+        call TraceAll("DBG ATTACK SUPPRESSED WHILE CANFLEE: source=CommonSleepUntilTargetDead captain=" + Int2Str(CaptainGroupSize()) + " combat=" + B2S(CaptainInCombat(true)) + " retreating=" + B2S(CaptainRetreating()) + " attackRunning=" + B2S(attack_running))
+      endif
       // Below is old style alliance but this overrides all hardcoded attacks whether you want it to or not
       //if (GetAllianceTarget() == target) then
       //  call AttackMoveKill(target)
