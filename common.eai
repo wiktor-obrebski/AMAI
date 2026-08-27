@@ -12549,6 +12549,30 @@ function AttackGroupAddUnknown takes nothing returns nothing
 endfunction
 
 //============================================================================
+function DebugTraceAttackFormationState takes string phase returns nothing
+  local group g = CreateGroup()
+  local unit u = null
+
+  call TraceAll("DBG FORM STATE: phase=" + phase + " ready=" + Int2Str(GetOwnAttackStrength()) + " captain=" + Int2Str(CaptainGroupSize()) + " mainArmy=" + Int2Str(main_army) + " healing=" + Int2Str(BlzGroupGetSize(unit_healing)) + " rescue=" + Int2Str(BlzGroupGetSize(unit_rescueing)) + " harass=" + Int2Str(BlzGroupGetSize(unit_harassing)) + " zeppelin=" + Int2Str(BlzGroupGetSize(unit_zepplin_move)) + " retreat=" + Int2Str(BlzGroupGetSize(in_retreat_group)) + " reset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
+
+  call GroupEnumUnitsOfPlayer(g, ai_player, null)
+
+  loop
+    set u = FirstOfGroup(g)
+    exitwhen u == null
+
+    if UnitAlive(u) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) and not IsUnitHidden(u) then
+      call TraceAll("DBG FORM UNIT: phase=" + phase + " handle=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " strength=" + Int2Str(R2I(GetUnitStrength(u))) + " hero=" + B2S(IsUnitType(u, UNIT_TYPE_HERO)) + " summoned=" + B2S(IsUnitType(u, UNIT_TYPE_SUMMONED)) + " standard=" + B2S(IsStandardUnit(u)) + " buying=" + B2S(IsUnitBuying(u)) + " healing=" + B2S(IsUnitInGroup(u, unit_healing)) + " rescue=" + B2S(IsUnitInGroup(u, unit_rescueing)) + " harass=" + B2S(IsUnitInGroup(u, unit_harassing)) + " zeppelin=" + B2S(IsUnitInGroup(u, unit_zepplin_move)) + " retreat=" + B2S(IsRetreatUnavailableForAttack(u)) + " loaded=" + B2S(IsUnitLoaded(u)) + " army=" + Int2Str(GetArmyOfUnit(u)) + " order=" + Int2Str(GetUnitCurrentOrder(u)))
+    endif
+
+    call GroupRemoveUnit(g, u)
+  endloop
+
+  call DestroyGroup(g)
+  set g = null
+  set u = null
+endfunction
+
 function FormGroupAM takes integer seconds returns nothing
   local integer index = 0
   local integer count = 0
@@ -12557,6 +12581,7 @@ function FormGroupAM takes integer seconds returns nothing
   local group g = null
   local unit u = null
 
+  call TraceAll("DBG FORM START: seconds=" + Int2Str(seconds) + " ready=" + Int2Str(GetOwnAttackStrength()) + " captain=" + Int2Str(CaptainGroupSize()) + " attackLength=" + Int2Str(attack_length))
   call InitAssault()
 
   loop
@@ -12605,6 +12630,7 @@ function FormGroupAM takes integer seconds returns nothing
       call Trace("Attacking Ghouls Formed:" + Int2Str(attacking_ghouls))
     endif
 
+    call TraceAll("DBG FORM REQUEST: index=" + Int2Str(index) + " unit=" + Int2Str(unitid) + " actualId=" + Int2Str(old_id[unitid]) + " desire=" + Int2Str(desire) + " townCount=" + Int2Str(count) + " captainBefore=" + Int2Str(CaptainGroupSize()))
     call ConversionsAM(desire,unitid)
 
     if count >= desire then
@@ -12613,10 +12639,17 @@ function FormGroupAM takes integer seconds returns nothing
       call AddAssault(count,old_id[unitid])
     endif
 
+    call TraceAll("DBG FORM ADD: index=" + Int2Str(index) + " unit=" + Int2Str(unitid) + " captainAfterAdd=" + Int2Str(CaptainGroupSize()))
     set index = index + 1
   endloop
   if seconds > 0 then
     call Sleep(seconds)
+  endif
+
+  call TraceAll("DBG FORM END: seconds=" + Int2Str(seconds) + " ready=" + Int2Str(GetOwnAttackStrength()) + " captain=" + Int2Str(CaptainGroupSize()))
+
+  if seconds > 0 and GetOwnAttackStrength() >= 15 and CaptainGroupSize() <= 5 then
+    call DebugTraceAttackFormationState("MISMATCH")
   endif
 endfunction
 
