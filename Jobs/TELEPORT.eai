@@ -5,12 +5,19 @@
 function TeleportJob takes unit hu returns nothing
   local group g = null
   local unit u = null
-  local integer current_order = GetUnitCurrentOrder(hu)
+  local integer current_order
 
   call DisplayToAllJobDebug("TELEPORT JOB Start")
 
+  if hu == null or not UnitAlive(hu) then
+    set teleporting = false
+    set main_hero_home_tp_retreat_pending = false
+    return
+  endif
 
-  if hu == null or not UnitAlive(hu) or ((current_order < 852008 or current_order > 852013) and current_order != OrderId("massteleport")) then // No longer teleporting
+  set current_order = GetUnitCurrentOrder(hu)
+
+  if (current_order < 852008 or current_order > 852013) and current_order != OrderId("massteleport") then // No longer teleporting
     set teleporting = false
 
     if main_hero_home_tp_retreat_pending then
@@ -28,20 +35,6 @@ function TeleportJob takes unit hu returns nothing
     endif
 
     return
-  endif
-
-  if main_hero_home_tp_retreat_pending then
-    call TraceAll("DBG HERO TP COMPLETE ATTACK ABORT: hero=" + Int2Str(GetHandleId(hu)) + " attackRunning=" + B2S(attack_running) + " captain=" + Int2Str(CaptainGroupSize()) + " captainHome=" + B2S(CaptainIsHome()) + " captainRetreating=" + B2S(CaptainRetreating()))
-    set break_attack = attack_running
-    call CaptainGoHome()
-    set retreat_end_switch = false
-    set isfleeing = true
-    set attack_running = false
-
-    if not retreat_controlled then
-      set retreat_controlled = true
-      call TQAddJob(0, RETREAT_CONTROL, 0)
-    endif
   endif
 
   set g = CreateGroup()
