@@ -12648,7 +12648,7 @@ function FormGroupAM takes integer seconds returns nothing
 
   call TraceAll("DBG FORM END: seconds=" + Int2Str(seconds) + " ready=" + Int2Str(GetOwnAttackStrength()) + " captain=" + Int2Str(CaptainGroupSize()))
 
-  if seconds > 0 and GetOwnAttackStrength() >= 15 and CaptainGroupSize() <= 5 then
+  if seconds > 0 and ((GetOwnAttackStrength() >= 15 and CaptainGroupSize() <= 5) or (GetOwnAttackStrength() >= 10 and CaptainGroupSize() <= 2)) then
     call DebugTraceAttackFormationState("MISMATCH")
   endif
 endfunction
@@ -13019,6 +13019,11 @@ function CommonSleepUntilTargetDeadAM takes unit target, boolean iscreeping, boo
       endif
       if CaptainInCombat(true) and combat_length_counter > attack_reform_length then
         set combat_length_counter = 0
+        if main_army >= 0 and army_loc[main_army] != null then
+          call TraceAll("DBG COMBAT REFORM: captain=" + Int2Str(CaptainGroupSize()) + " ready=" + Int2Str(GetOwnAttackStrength()) + " distHome=" + Int2Str(R2I(DistanceBetweenPoints_kd(home_location, army_loc[main_army]))) + " army=" + Int2Str(main_army))
+        else
+          call TraceAll("DBG COMBAT REFORM: captain=" + Int2Str(CaptainGroupSize()) + " ready=" + Int2Str(GetOwnAttackStrength()) + " distHome=-1 army=" + Int2Str(main_army))
+        endif
         call FormGroupAM(0) // Safe in combat as reinforces while fight is ongoing
       elseif not CaptainInCombat(true) and attack_length_counter > R2I(LinearInterpolation(30, 80, attack_reform_length, attack_reform_length * 10, FoodUsed())+0.5) then // If a large army generally don't want to wait for reinforcements, so only reform occasionally
         set attack_length_counter = 0
@@ -14024,6 +14029,9 @@ function SingleMeleeAttackAM takes boolean needs_exp, boolean has_siege, integer
   local unit creep = null
   local unit common = null
 
+  local integer debug_formed_strength = 0
+  local integer debug_target_required = 0
+  local integer debug_attack_bonus = 0
 //call Trace("SingleMeleeAttack")
 
   if desperation_assault and not no_attack then
@@ -14283,8 +14291,20 @@ function SingleMeleeAttackAM takes boolean needs_exp, boolean has_siege, integer
         set hall = ChooseAttackTarget(hall)
         if hall != null and UnitAlive(hall) then
           call TraceAll("DBG ATTACK PATH: NORMAL")
+          call TraceAll("DBG NORMAL PRE FORM: strategic=" + Int2Str(own_strength) + " captain=" + Int2Str(CaptainGroupSize()) + " captainHome=" + B2S(CaptainIsHome()) + " captainRetreating=" + B2S(CaptainRetreating()) + " mainArmy=" + Int2Str(main_army))
           call SetAllianceTargetIfLeadAndChat(alli_target, C_Attack)
           call FromGroupAndGhoulsAM(3)
+
+          set debug_formed_strength = 0
+          if main_army >= 0 then
+            set debug_formed_strength = R2I(army_strength[main_army])
+          endif
+
+          set debug_target_required = GetTargetStrength(hall) + GetTowerFactor(hall)
+          set debug_attack_bonus = attacking_aggression + added_aggression + added_racial_aggression + added_target_aggression
+
+          call TraceAll("DBG NORMAL POST FORM: strategic=" + Int2Str(own_strength) + " formedEstimate=" + Int2Str(debug_formed_strength) + " captain=" + Int2Str(CaptainGroupSize()) + " targetRequired=" + Int2Str(debug_target_required) + " attackBonus=" + Int2Str(debug_attack_bonus) + " strategicLimit=" + Int2Str(own_strength + debug_attack_bonus) + " formedLimit=" + Int2Str(debug_formed_strength + debug_attack_bonus) + " captainHome=" + B2S(CaptainIsHome()) + " captainRetreating=" + B2S(CaptainRetreating()) + " mainArmy=" + Int2Str(main_army))
+
           call AttackMoveKillAAM(hall, true)
           set hall = null
           return

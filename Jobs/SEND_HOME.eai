@@ -91,6 +91,9 @@ function SendUnitHomeJob takes unit u, integer p returns nothing
   // Forced retreat: send unit home regardless of health (p == 1)
   if p >= 1 and DistanceBetweenPoints_dk(GetUnitLoc(u), captain_home) >= 650 then
     //call CreateDebugTag("SEND_HOME: Forced retreat", 10, u, 2.00, 1.50)
+    if IsUnitInGroup(u, debug_retreat_transit_group) then
+      call TraceAll("DBG RETREAT TRANSIT SEND_HOME: rid=" + Int2Str(debug_retreat_transit_id) + " id=" + Int2Str(GetHandleId(u)) + " distHome=" + Int2Str(R2I(DistanceBetweenPoints_dk(GetUnitLoc(u), captain_home))) + " distFight=" + Int2Str(R2I(DistanceBetweenPoints_dk(GetUnitLoc(u), debug_retreat_origin))) + " order=" + Int2Str(GetUnitCurrentOrder(u)) + " army=" + Int2Str(GetArmyOfUnit(u)))
+    endif
     call RemoveGuardPosition(u)
     call SendHomeMoveUnitToLoc(u, captain_home)
     call TQAddUnitJob(4, SEND_HOME, p, u)
@@ -99,6 +102,10 @@ function SendUnitHomeJob takes unit u, integer p returns nothing
     call CreateDebugTag("SEND_HOME: Retreated", 10, u, 2.00, 1.50)
     call GroupAddUnit(retreat_reset_pending, u)
     call GroupRemoveUnit(in_retreat_group, u)
+    if IsUnitInGroup(u, debug_retreat_transit_group) then
+      call TraceAll("DBG RETREAT TRANSIT ARRIVED: rid=" + Int2Str(debug_retreat_transit_id) + " id=" + Int2Str(GetHandleId(u)) + " distFight=" + Int2Str(R2I(DistanceBetweenPoints_dk(GetUnitLoc(u), debug_retreat_origin))))
+      call GroupRemoveUnit(debug_retreat_transit_group, u)
+    endif
     call TraceAll("DBG RETREAT ARRIVED: id=" + Int2Str(GetHandleId(u)) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)) + " hero=" + B2S(IsUnitType(u, UNIT_TYPE_HERO)))
     call TQAddUnitJob(15, RESET_GUARD_POSITION, p, u)
     return

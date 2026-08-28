@@ -24,7 +24,94 @@
     integer debug_retreat_run_seq = 0
 
     group debug_flee_candidate_group = CreateGroup()
+
+    integer debug_retreat_transit_id = 0
+    boolean debug_retreat_transit_active = false
+    group debug_retreat_transit_group = CreateGroup()
+    location debug_retreat_origin = Location(0,0)
 #ELSE
+
+function DebugStartRetreatTransitTracking takes nothing returns nothing
+  local group g = CreateGroup()
+  local unit u = null
+  local location ul = null
+  local real dist_fight = 0
+  local real dist_home = 0
+
+  set debug_retreat_transit_id = debug_retreat_transit_id + 1
+  set debug_retreat_transit_active = true
+  call GroupClear(debug_retreat_transit_group)
+
+  if enemy_loc != null and (GetLocationX(enemy_loc) != 0 or GetLocationY(enemy_loc) != 0) then
+    call MoveLocation(debug_retreat_origin, GetLocationX(enemy_loc), GetLocationY(enemy_loc))
+  elseif main_army >= 0 and army_loc[main_army] != null then
+    call MoveLocation(debug_retreat_origin, GetLocationX(army_loc[main_army]), GetLocationY(army_loc[main_army]))
+  else
+    call MoveLocation(debug_retreat_origin, GetLocationX(captain_home), GetLocationY(captain_home))
+  endif
+
+  call TraceAll("DBG RETREAT TRANSIT START: rid=" + Int2Str(debug_retreat_transit_id) + " captain=" + Int2Str(CaptainGroupSize()) + " originX=" + Int2Str(R2I(GetLocationX(debug_retreat_origin))) + " originY=" + Int2Str(R2I(GetLocationY(debug_retreat_origin))))
+
+  call GroupEnumUnitsOfPlayer(g, ai_player, null)
+
+  loop
+    set u = FirstOfGroup(g)
+    exitwhen u == null
+
+    if UnitAlive(u) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) then
+      set ul = GetUnitLoc(u)
+      set dist_fight = DistanceBetweenPoints(ul, debug_retreat_origin)
+      set dist_home = DistanceBetweenPoints(ul, captain_home)
+
+      if dist_fight >= 1000 then
+        call GroupAddUnit(debug_retreat_transit_group, u)
+        call TraceAll("DBG RETREAT TRANSIT SNAP: rid=" + Int2Str(debug_retreat_transit_id) + " id=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " distFight=" + Int2Str(R2I(dist_fight)) + " distHome=" + Int2Str(R2I(dist_home)) + " order=" + Int2Str(GetUnitCurrentOrder(u)) + " army=" + Int2Str(GetArmyOfUnit(u)) + " standard=" + B2S(IsStandardUnit(u)) + " inRetreat=" + B2S(IsUnitInGroup(u, in_retreat_group)) + " reset=" + B2S(IsUnitInGroup(u, retreat_reset_pending)))
+      endif
+
+      call RemoveLocation(ul)
+      set ul = null
+    endif
+
+    call GroupRemoveUnit(g, u)
+  endloop
+
+  call DestroyGroup(g)
+  set g = null
+  set u = null
+endfunction
+
+function DebugTraceRetreatTransitState takes string phase returns nothing
+  local group g = null
+  local unit u = null
+  local location ul = null
+
+  if not debug_retreat_transit_active then
+    return
+  endif
+
+  set g = CopyGroup(debug_retreat_transit_group)
+
+  loop
+    set u = FirstOfGroup(g)
+    exitwhen u == null
+
+    if UnitAlive(u) then
+      set ul = GetUnitLoc(u)
+      call TraceAll("DBG RETREAT TRANSIT: rid=" + Int2Str(debug_retreat_transit_id) + " phase=" + phase + " id=" + Int2Str(GetHandleId(u)) + " distFight=" + Int2Str(R2I(DistanceBetweenPoints(ul, debug_retreat_origin))) + " distHome=" + Int2Str(R2I(DistanceBetweenPoints(ul, captain_home))) + " order=" + Int2Str(GetUnitCurrentOrder(u)) + " army=" + Int2Str(GetArmyOfUnit(u)) + " standard=" + B2S(IsStandardUnit(u)) + " inRetreat=" + B2S(IsUnitInGroup(u, in_retreat_group)) + " reset=" + B2S(IsUnitInGroup(u, retreat_reset_pending)))
+      call RemoveLocation(ul)
+      set ul = null
+    else
+      call TraceAll("DBG RETREAT TRANSIT DEAD: rid=" + Int2Str(debug_retreat_transit_id) + " id=" + Int2Str(GetHandleId(u)))
+      call GroupRemoveUnit(debug_retreat_transit_group, u)
+    endif
+
+    call GroupRemoveUnit(g, u)
+  endloop
+
+  call DestroyGroup(g)
+  set g = null
+  set u = null
+endfunction
 
 //============================================================================
 // Retreat Control Job //Updated by Strategy Master 26/07/05
@@ -142,7 +229,17 @@ if not isfleeing and canflee and (CaptainRetreating() or CaptainIsHome()) then
   endif
   call TraceAll("RETREAT_CONTROL: Natural Flee !!!")
   call TraceAll(    "DBG FLEE WRITE:"    + " run=" + Int2Str(debug_run_id)    + " reason=NATURAL"    + " old=false new=true"    + " epoch=" + Int2Str(debug_retreat_epoch)    + " retreatCtl=" + B2S(retreat_controlled)    + " captainRetreating=" + B2S(CaptainRetreating())    + " captainHome=" + B2S(CaptainIsHome()))
+  if not debug_retreat_transit_active then
+    call DebugStartRetreatTransitTracking()
+  endif
   set isfleeing = true
+endif
+
+if isfleeing then
+  if not debug_retreat_transit_active then
+    call DebugStartRetreatTransitTracking()
+  endif
+  call DebugTraceRetreatTransitState("RC")
 endif
 
 if ((not attack_running and not isfleeing) or isfleeing or (town_threatened and town_threat_break) or player_defeated) then
@@ -151,6 +248,8 @@ if ((not attack_running and not isfleeing) or isfleeing or (town_threatened and 
     if CaptainIsHome() or retreat_end_switch or (not attack_running and not isfleeing) or player_defeated or (main_army >= 0 and DistanceBetweenPoints(army_loc[main_army], captain_home) <= 750) then
       call TraceAll("===Retreat control ended===")
       call TraceAll("DBG RETREAT END: captain=" + Int2Str(CaptainGroupSize()) + " break=" + B2S(break_attack) + " desperation=" + B2S(desperation_assault) + " attackRunning=" + B2S(attack_running) + " captainHome=" + B2S(CaptainIsHome()) + " captainRetreating=" + B2S(CaptainRetreating()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
+      call DebugTraceRetreatTransitState("END")
+      set debug_retreat_transit_active = false
 
       set retreat_controlled = false
       set debug_retreat_epoch = debug_retreat_epoch + 1
@@ -317,6 +416,11 @@ if attack_running then
     endif
     call TraceAll("RETREAT_CONTROL: Flee!!!!")
     set break_attack = attack_running
+
+    if not debug_retreat_transit_active then
+      call DebugStartRetreatTransitTracking()
+    endif
+
     call CaptainGoHome()
     if not isfleeing then
       call TraceAll(        "DBG FLEE WRITE:"        + " run=" + Int2Str(debug_run_id)        + " reason=FORCED"        + " old=false new=true"        + " epoch=" + Int2Str(debug_retreat_epoch)        + " retreatCtl=" + B2S(retreat_controlled)        + " captainRetreating=" + B2S(CaptainRetreating()))
