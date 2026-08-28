@@ -57,6 +57,10 @@ function SendUnitHomeJob takes unit u, integer p returns nothing
 
   if GetUnitState(u, UNIT_STATE_LIFE) <= 0 then
     call CreateDebugTag("SEND_HOME unit dead", 10, u, 3.00, 1.50)
+    if IsUnitInGroup(u, debug_retreat_transit_group) then
+      call TraceAll("DBG RETREAT TRANSIT DEAD SEND_HOME: rid=" + Int2Str(debug_retreat_transit_id) + " id=" + Int2Str(GetHandleId(u)) + " army=" + Int2Str(GetArmyOfUnit(u)))
+      call GroupRemoveUnit(debug_retreat_transit_group, u)
+    endif
     if p >= 1 then
         call GroupRemoveUnit(in_retreat_group, u)
     endif

@@ -38,6 +38,9 @@ function DebugStartRetreatTransitTracking takes nothing returns nothing
   local real dist_fight = 0
   local real dist_home = 0
 
+  if BlzGroupGetSize(debug_retreat_transit_group) > 0 then
+    call TraceAll("DBG RETREAT TRANSIT OVERWRITE: oldRid=" + Int2Str(debug_retreat_transit_id) + " remaining=" + Int2Str(BlzGroupGetSize(debug_retreat_transit_group)))
+  endif
   set debug_retreat_transit_id = debug_retreat_transit_id + 1
   set debug_retreat_transit_active = true
   call GroupClear(debug_retreat_transit_group)
