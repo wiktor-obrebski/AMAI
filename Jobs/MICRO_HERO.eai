@@ -99,7 +99,9 @@ function GoHomeIfMainHero takes unit u, real x, real y, boolean defer_retreat, s
     call TraceAll("DBG MICRO HERO MAIN RETREAT: reason=" + reason + " hero=" + Int2Str(GetHandleId(u)) + " hp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_LIFE))) + " maxHp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_MAX_LIFE))) + " attackRunning=" + B2S(attack_running) + " retreatCtl=" + B2S(retreat_controlled) + " canFlee=" + B2S(canflee) + " fleeing=" + B2S(isfleeing) + " captain=" + Int2Str(CaptainGroupSize()) + " captainRetreating=" + B2S(CaptainRetreating()))
 
     if defer_retreat then
-      set main_hero_home_tp_retreat_pending = attack_running
+      if attack_running then
+        set main_hero_home_tp_retreat_pending = true
+      endif
       call TeleportCaptain(x, y)
     else
       call CaptainGoHome()
