@@ -226,7 +226,7 @@ if not retreat_controlled then
   return
 endif
 
-if not isfleeing and canflee and (CaptainRetreating() or CaptainIsHome()) then
+if not isfleeing and canflee and (CaptainRetreating() or (CaptainIsHome() and not main_hero_home_tp_retreat_pending)) then
   if ordinary_creep_attack_running then
     call TraceAll("DBG CREEP NATURAL FLEE: id=" + Int2Str(creep_debug_id))
   endif
@@ -248,7 +248,7 @@ endif
 if ((not attack_running and not isfleeing) or isfleeing or (town_threatened and town_threat_break) or player_defeated) then
     set break_attack = attack_running
     call TraceAll("RETREAT: Pending End fleeing:" + B2S(isfleeing))
-    if CaptainIsHome() or retreat_end_switch or (not attack_running and not isfleeing) or player_defeated or (main_army >= 0 and DistanceBetweenPoints(army_loc[main_army], captain_home) <= 750) then
+    if (CaptainIsHome() and not main_hero_home_tp_retreat_pending) or retreat_end_switch or (not attack_running and not isfleeing) or player_defeated or (not main_hero_home_tp_retreat_pending and main_army >= 0 and army_loc[main_army] != null and DistanceBetweenPoints(army_loc[main_army], captain_home) <= 750) then
       call TraceAll("===Retreat control ended===")
       call TraceAll("DBG RETREAT END: captain=" + Int2Str(CaptainGroupSize()) + " break=" + B2S(break_attack) + " desperation=" + B2S(desperation_assault) + " attackRunning=" + B2S(attack_running) + " captainHome=" + B2S(CaptainIsHome()) + " captainRetreating=" + B2S(CaptainRetreating()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
       call DebugTraceRetreatTransitState("END")
@@ -305,6 +305,11 @@ if isfleeing or (town_threatened and town_threat_break) then
       set retreat_end_switch = true
     else
       set retreat_end_switch = false
+    endif
+
+    if main_hero_home_tp_retreat_pending and isfleeing then
+      call TraceAll("DBG HERO TP RETREAT CAPTURE COMPLETE: captain=" + Int2Str(CaptainGroupSize()) + " retreatUnits=" + Int2Str(BlzGroupGetSize(in_retreat_group)))
+      set main_hero_home_tp_retreat_pending = false
     endif
 endif
 

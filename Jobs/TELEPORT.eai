@@ -10,8 +10,29 @@ function TeleportJob takes unit hu returns nothing
   call DisplayToAllJobDebug("TELEPORT JOB Start")
   if hu == null or not UnitAlive(hu) or ((current_order < 852008 or current_order > 852013) and current_order != OrderId("massteleport")) then // No longer teleporting
     set teleporting = false
+
+    if main_hero_home_tp_retreat_pending then
+      call TraceAll("DBG HERO TP CANCELLED: hero=" + Int2Str(GetHandleId(u)))
+      set main_hero_home_tp_retreat_pending = false
+    endif
+
     return
   endif
+
+  if main_hero_home_tp_retreat_pending then
+    call TraceAll("DBG HERO TP COMPLETE ATTACK ABORT: hero=" + Int2Str(GetHandleId(u)) + " attackRunning=" + B2S(attack_running) + " captain=" + Int2Str(CaptainGroupSize()) + " captainHome=" + B2S(CaptainIsHome()) + " captainRetreating=" + B2S(CaptainRetreating()))
+    set break_attack = attack_running
+    call CaptainGoHome()
+    set retreat_end_switch = false
+    set isfleeing = true
+    set attack_running = false
+
+    if not retreat_controlled then
+      set retreat_controlled = true
+      call TQAddJob(0, RETREAT_CONTROL, 0)
+    endif
+  endif
+
   set g = CreateGroup()
   call GroupEnumUnitsInRange(g, GetUnitX(hu), GetUnitY(hu), 2 * teleport_radius, null)
   call GroupRemoveUnit(g, hu)
