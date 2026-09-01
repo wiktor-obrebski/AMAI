@@ -12582,6 +12582,11 @@ function FormGroupAM takes integer seconds returns nothing
   local unit u = null
 
   call TraceAll("DBG FORM START: seconds=" + Int2Str(seconds) + " ready=" + Int2Str(GetOwnAttackStrength()) + " captain=" + Int2Str(CaptainGroupSize()) + " attackLength=" + Int2Str(attack_length))
+
+  if ordinary_creep_attack_running or BlzGroupGetSize(retreat_reset_pending) > 0 then
+    call TraceAll("DBG FORMGROUP BEGIN: seconds=" + Int2Str(seconds) + " creepRunning=" + B2S(ordinary_creep_attack_running) + " creepId=" + Int2Str(creep_debug_id) + " attackRunning=" + B2S(attack_running) + " captain=" + Int2Str(CaptainGroupSize()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)) + " readyStrength=" + Int2Str(GetOwnAttackStrength()) + " totalStrength=" + Int2Str(GetOwnStrength()))
+  endif
+
   call InitAssault()
 
   loop
@@ -12597,6 +12602,10 @@ function FormGroupAM takes integer seconds returns nothing
 
     set desire = attack_max[index]
     set count  = TownCountDone(unitid)
+
+    if ordinary_creep_attack_running or BlzGroupGetSize(retreat_reset_pending) > 0 then
+      call TraceAll("DBG FORMGROUP TYPE: index=" + Int2Str(index) + " unit=" + Int2Str(old_id[unitid]) + " countDone=" + Int2Str(count) + " desire=" + Int2Str(desire) + " captain=" + Int2Str(CaptainGroupSize()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
+    endif
 
     if GetWood() > minimum_peon_wood then
       set take_all_ghouls_along = true
@@ -12637,6 +12646,10 @@ function FormGroupAM takes integer seconds returns nothing
       call AddAssault(desire,old_id[unitid])
     else
       call AddAssault(count,old_id[unitid])
+    endif
+
+    if ordinary_creep_attack_running or BlzGroupGetSize(retreat_reset_pending) > 0 then
+      call TraceAll("DBG FORMGROUP AFTER ADD: index=" + Int2Str(index) + " unit=" + Int2Str(old_id[unitid]) + " countDone=" + Int2Str(count) + " desire=" + Int2Str(desire) + " captain=" + Int2Str(CaptainGroupSize()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
     endif
 
     call TraceAll("DBG FORM ADD: index=" + Int2Str(index) + " unit=" + Int2Str(unitid) + " captainAfterAdd=" + Int2Str(CaptainGroupSize()))
@@ -13311,7 +13324,7 @@ function CreepAttack takes integer str returns nothing
   set tmp_creep_strength = GetCreepCampStrength(target)
   set enemy_near_creep = GetLocationNonCreepStrength(GetUnitX(target), GetUnitY(target), 1500)
 
-  call TraceAll("DBG CREEP START: id=" + Int2Str(creep_debug_id) + " own=" + Int2Str(str) + " captain=" + Int2Str(CaptainGroupSize()) + " creep=" + Int2Str(tmp_creep_strength) + " enemyNearCamp=" + Int2Str(enemy_near_creep) + " target=" + Int2Str(GetHandleId(target)))
+  call TraceAll("DBG CREEP START: t=" + Int2Str(R2I(TimerGetElapsed(tq_timer))) + " id=" + Int2Str(creep_debug_id) + " own=" + Int2Str(str) + " readyNow=" + Int2Str(GetOwnAttackStrength()) + " total=" + Int2Str(GetOwnStrength()) + " captain=" + Int2Str(CaptainGroupSize()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)) + " creep=" + Int2Str(tmp_creep_strength) + " enemyNearCamp=" + Int2Str(enemy_near_creep) + " target=" + Int2Str(GetHandleId(target)) + " x=" + Int2Str(R2I(GetUnitX(target))) + " y=" + Int2Str(R2I(GetUnitY(target))) + " retreatCtl=" + B2S(retreat_controlled) + " fleeing=" + B2S(isfleeing))
 
   if air_strength > 15 then
     call SetAllianceTargetIfLeadAndChat(target, C_Creep)

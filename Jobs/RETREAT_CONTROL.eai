@@ -235,6 +235,8 @@ if not isfleeing and canflee and (CaptainRetreating() or (CaptainIsHome() and no
   if not debug_retreat_transit_active then
     call DebugStartRetreatTransitTracking()
   endif
+
+  set retreat_end_switch = false
   set isfleeing = true
 endif
 
@@ -248,7 +250,8 @@ endif
 if ((not attack_running and not isfleeing) or isfleeing or (town_threatened and town_threat_break) or player_defeated) then
     set break_attack = attack_running
     call TraceAll("RETREAT: Pending End fleeing:" + B2S(isfleeing))
-    if (CaptainIsHome() and not main_hero_home_tp_retreat_pending) or retreat_end_switch or (not attack_running and not isfleeing) or player_defeated or (not main_hero_home_tp_retreat_pending and main_army >= 0 and army_loc[main_army] != null and DistanceBetweenPoints(army_loc[main_army], captain_home) <= 750) then
+    //if (CaptainIsHome() and not main_hero_home_tp_retreat_pending) or retreat_end_switch or (not attack_running and not isfleeing) or player_defeated or (not main_hero_home_tp_retreat_pending and main_army >= 0 and army_loc[main_army] != null and DistanceBetweenPoints(army_loc[main_army], captain_home) <= 750) then
+    if retreat_end_switch or (not attack_running and not isfleeing) or player_defeated or (not isfleeing and not main_hero_home_tp_retreat_pending and (CaptainIsHome() or (main_army >= 0 and army_loc[main_army] != null and DistanceBetweenPoints(army_loc[main_army], captain_home) <= 750))) then
       call TraceAll("===Retreat control ended===")
       call TraceAll("DBG RETREAT END: captain=" + Int2Str(CaptainGroupSize()) + " break=" + B2S(break_attack) + " desperation=" + B2S(desperation_assault) + " attackRunning=" + B2S(attack_running) + " captainHome=" + B2S(CaptainIsHome()) + " captainRetreating=" + B2S(CaptainRetreating()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
       call DebugTraceRetreatTransitState("END")
@@ -432,7 +435,9 @@ if attack_running then
     call CaptainGoHome()
     if not isfleeing then
       call TraceAll(        "DBG FLEE WRITE:"        + " run=" + Int2Str(debug_run_id)        + " reason=FORCED"        + " old=false new=true"        + " epoch=" + Int2Str(debug_retreat_epoch)        + " retreatCtl=" + B2S(retreat_controlled)        + " captainRetreating=" + B2S(CaptainRetreating()))
+      set retreat_end_switch = false
     endif
+
     set isfleeing = true
   elseif CaptainInCombat(true) and not desperation_assault and (enemy_strength_sum > ApplyFleeStrengthModifier(ally_strength_sum, false) or (battle_radius == creep_battle_radius and enemy_strength_sum > ally_strength_sum )) then
     if ordinary_creep_attack_running then

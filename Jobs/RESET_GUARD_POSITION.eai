@@ -4,14 +4,18 @@ function ResetGuardPositionJob takes unit u returns nothing
   call DisplayToAllJobDebug("RESET_GUARD_POSITION JOB START")
   call CreateDebugTag("RECYCLE Full", 10, u, 3.00, 1.50)
 
+  call TraceAll("DBG RESET BEGIN: id=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " alive=" + B2S(UnitAlive(u)) + " order=" + Int2Str(GetUnitCurrentOrder(u)) + " army=" + Int2Str(GetArmyOfUnit(u)) + " captain=" + Int2Str(CaptainGroupSize()) + " attackRunning=" + B2S(attack_running) + " creepRunning=" + B2S(ordinary_creep_attack_running) + " creepId=" + Int2Str(creep_debug_id) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)) + " unavailable=" + B2S(IsRetreatUnavailableForAttack(u)))
+
   call RecycleGuardPosition(u)
 
-  call GroupRemoveUnit(retreat_reset_pending, u)
+  call TraceAll("DBG RESET AFTER RECYCLE: id=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " order=" + Int2Str(GetUnitCurrentOrder(u)) + " army=" + Int2Str(GetArmyOfUnit(u)) + " captain=" + Int2Str(CaptainGroupSize()) + " attackRunning=" + B2S(attack_running) + " creepRunning=" + B2S(ordinary_creep_attack_running) + " creepId=" + Int2Str(creep_debug_id) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)) + " unavailable=" + B2S(IsRetreatUnavailableForAttack(u)))
 
+  call GroupRemoveUnit(retreat_reset_pending, u)
   call GroupRemoveUnit(unit_healing, u)
   call GroupRemoveUnit(unit_rescueing, u)
   call GroupRemoveUnit(unit_harassing, u)
   call GroupRemoveUnit(unit_zepplin_move, u)
- // call SetUnitUserData(u, UNIT_STANDARD)
+
+  call TraceAll("DBG RESET RELEASED: id=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " order=" + Int2Str(GetUnitCurrentOrder(u)) + " army=" + Int2Str(GetArmyOfUnit(u)) + " captain=" + Int2Str(CaptainGroupSize()) + " attackRunning=" + B2S(attack_running) + " creepRunning=" + B2S(ordinary_creep_attack_running) + " creepId=" + Int2Str(creep_debug_id) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)) + " unavailable=" + B2S(IsRetreatUnavailableForAttack(u)))
 endfunction
 #ENDIF

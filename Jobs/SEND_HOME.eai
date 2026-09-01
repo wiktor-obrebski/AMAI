@@ -110,7 +110,7 @@ function SendUnitHomeJob takes unit u, integer p returns nothing
       call TraceAll("DBG RETREAT TRANSIT ARRIVED: rid=" + Int2Str(debug_retreat_transit_id) + " id=" + Int2Str(GetHandleId(u)) + " distFight=" + Int2Str(R2I(DistanceBetweenPoints_dk(GetUnitLoc(u), debug_retreat_origin))))
       call GroupRemoveUnit(debug_retreat_transit_group, u)
     endif
-    call TraceAll("DBG RETREAT ARRIVED: id=" + Int2Str(GetHandleId(u)) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)) + " hero=" + B2S(IsUnitType(u, UNIT_TYPE_HERO)))
+    call TraceAll("DBG RETREAT ARRIVED: id=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " order=" + Int2Str(GetUnitCurrentOrder(u)) + " army=" + Int2Str(GetArmyOfUnit(u)) + " captain=" + Int2Str(CaptainGroupSize()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)) + " attackRunning=" + B2S(attack_running) + " creepRunning=" + B2S(ordinary_creep_attack_running) + " creepId=" + Int2Str(creep_debug_id) + " hero=" + B2S(IsUnitType(u, UNIT_TYPE_HERO)))
     call TQAddUnitJob(15, RESET_GUARD_POSITION, p, u)
     return
   endif
