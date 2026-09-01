@@ -117,6 +117,12 @@ globals
 
     integer creep_debug_id = 0
     boolean ordinary_creep_attack_running = false
+    real creep_gather_radius = 900
+    integer creep_gather_max_wait = 5
+    unit creep_gather_failed_target = null
+    real creep_gather_failed_until = 0
+    boolean creep_gather_performed = false
+
     // =============================================================
     // AMAI constants
     // =============================================================
@@ -13193,6 +13199,153 @@ function AttackMoveKillAAM takes unit target, boolean ally_override returns noth
   call Sleep(2.5)
 endfunction
 
+function IsAvailableForAttackGather takes unit u returns boolean
+  if u == null or not UnitAlive(u) or IsUnitHidden(u) then
+    return false
+  endif
+  if IsUnitType(u, UNIT_TYPE_PEON) or IsUnitType(u, UNIT_TYPE_STRUCTURE) or IsUnitType(u, UNIT_TYPE_SUMMONED) then
+    return false
+  endif
+  if not IsStandardUnit(u) or IsUnitBuying(u) or IsRetreatUnavailableForAttack(u) then
+    return false
+  endif
+  if GetUnitCurrentOrder(u) == OrderId("harvest") then
+    return false
+  endif
+  return true
+endfunction
+
+function GetAttackGatherStrength takes unit anchor, real radius returns integer
+  local group g = CreateGroup()
+  local unit u = null
+  local real sum = 0
+
+  call GroupEnumUnitsInRange(g, GetUnitX(anchor), GetUnitY(anchor), radius, null)
+
+  loop
+    set u = FirstOfGroup(g)
+    exitwhen u == null
+
+    if GetOwningPlayer(u) == ai_player and IsAvailableForAttackGather(u) then
+      set sum = sum + GetUnitStrength(u)
+    endif
+
+    call GroupRemoveUnit(g, u)
+  endloop
+
+  call DestroyGroup(g)
+  set g = null
+  set u = null
+  return R2I(sum)
+endfunction
+
+function GatherForCreepAttack takes unit target returns boolean
+  local group gather_group = CreateGroup()
+  local group g = CreateGroup()
+  local group cg = null
+  local unit u = null
+  local location anchor_loc = null
+  local integer waited = 0
+  local integer near_strength = 0
+  local integer local_creep_strength = GetCreepCampStrength(target) + 1
+  local boolean gather_aborted = false
+  local boolean gather_success = false
+
+  set creep_gather_performed = false
+
+  if major_hero == null or not UnitAlive(major_hero) or not IsUnitType(major_hero, UNIT_TYPE_HERO) then
+    call TraceAll("DBG GATHER SKIP: creepId=" + Int2Str(creep_debug_id) + " reason=NO_HERO")
+    call DestroyGroup(gather_group)
+    call DestroyGroup(g)
+    return true
+  endif
+  set creep_gather_performed = true
+
+  set anchor_loc = Location(GetUnitX(major_hero), GetUnitY(major_hero))
+
+  call GroupEnumUnitsOfPlayer(g, ai_player, null)
+
+  loop
+    set u = FirstOfGroup(g)
+    exitwhen u == null
+
+    if u != major_hero and IsAvailableForAttackGather(u) and DistanceBetweenUnits(u, major_hero) > creep_gather_radius then
+      call RemoveGuardPosition(u)
+      call GroupAddUnit(gather_group, u)
+      call SendHomeMoveUnitToLoc(u, anchor_loc)
+      call TraceAll("DBG GATHER UNIT START: creepId=" + Int2Str(creep_debug_id) + " id=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " dist=" + Int2Str(R2I(DistanceBetweenUnits(u, major_hero))) + " order=" + Int2Str(GetUnitCurrentOrder(u)))
+    endif
+
+    call GroupRemoveUnit(g, u)
+  endloop
+
+  call DestroyGroup(g)
+  set g = null
+
+  loop
+    if town_threatened or major_hero == null or not UnitAlive(major_hero) then
+      set gather_aborted = true
+    else
+      set near_strength = GetAttackGatherStrength(major_hero, creep_gather_radius)
+      call TraceAll("DBG GATHER STATE: creepId=" + Int2Str(creep_debug_id) + " waited=" + Int2Str(waited) + " near=" + Int2Str(near_strength) + " creep=" + Int2Str(local_creep_strength) + " gathering=" + Int2Str(BlzGroupGetSize(gather_group)))
+    endif
+
+    exitwhen gather_aborted
+    exitwhen near_strength > local_creep_strength
+    exitwhen waited >= creep_gather_max_wait
+
+    call Sleep(1)
+    set waited = waited + 1
+
+    if town_threatened or major_hero == null or not UnitAlive(major_hero) then
+      set gather_aborted = true
+    else
+      call MoveLocation(anchor_loc, GetUnitX(major_hero), GetUnitY(major_hero))
+      set cg = CopyGroup(gather_group)
+
+      loop
+        set u = FirstOfGroup(cg)
+        exitwhen u == null
+
+        if not IsAvailableForAttackGather(u) then
+          call GroupRemoveUnit(gather_group, u)
+        elseif DistanceBetweenUnits(u, major_hero) > creep_gather_radius then
+          call SendHomeMoveUnitToLoc(u, anchor_loc)
+        endif
+
+        call GroupRemoveUnit(cg, u)
+      endloop
+
+      call DestroyGroup(cg)
+      set cg = null
+    endif
+  endloop
+
+  set cg = CopyGroup(gather_group)
+  loop
+    set u = FirstOfGroup(cg)
+    exitwhen u == null
+    if UnitAlive(u) then
+      call RecycleGuardPosition(u)
+    endif
+    call GroupRemoveUnit(cg, u)
+  endloop
+  call DestroyGroup(cg)
+
+  call DestroyGroup(gather_group)
+  call RemoveLocation(anchor_loc)
+
+  set gather_group = null
+  set anchor_loc = null
+  set u = null
+
+  set gather_success = not gather_aborted and near_strength > local_creep_strength
+
+  call TraceAll("DBG GATHER END: creepId=" + Int2Str(creep_debug_id) + " waited=" + Int2Str(waited) + " near=" + Int2Str(near_strength) + " creep=" + Int2Str(local_creep_strength) + " aborted=" + B2S(gather_aborted) + " success=" + B2S(gather_success))
+
+  return gather_success
+endfunction
+
 //============================================================================
 // Attack target code without the battle radius set so uses the creep radius
 // and without distraction attack
@@ -13202,7 +13355,13 @@ function AttackMoveKillCreep takes unit target, boolean ally_override returns no
     call Sleep(3 * sleep_multiplier)
     return
   endif
-  call FromGroupAndGhoulsAM(3)
+
+  if ordinary_creep_attack_running and creep_gather_performed then
+    call FromGroupAndGhoulsAM(0)
+  else
+    call FromGroupAndGhoulsAM(3)
+  endif
+
   set attack_running = true
   call EnableRetreatControl()
   call TraceAll("DBG RAW ATTACK: Creep captain=" + Int2Str(CaptainGroupSize()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
@@ -13319,6 +13478,13 @@ function CreepAttack takes integer str returns nothing
     return
   endif
 
+  if target == creep_gather_failed_target and TimerGetElapsed(tq_timer) < creep_gather_failed_until then
+    call TraceAll("DBG GATHER COOLDOWN: target=" + Int2Str(GetHandleId(target)) + " remaining=" + Int2Str(R2I(creep_gather_failed_until - TimerGetElapsed(tq_timer))))
+    set target = null
+    call Sleep(3 * sleep_multiplier)
+    return
+  endif
+
   set creep_debug_id = creep_debug_id + 1
 
   set tmp_creep_strength = GetCreepCampStrength(target)
@@ -13331,7 +13497,17 @@ function CreepAttack takes integer str returns nothing
   endif
 
   set ordinary_creep_attack_running = true
-  call AttackMoveKillCreep(target, true)
+
+  if GatherForCreepAttack(target) then
+    set creep_gather_failed_target = null
+    set creep_gather_failed_until = 0
+    call AttackMoveKillCreep(target, true)
+  else
+    set creep_gather_failed_target = target
+    set creep_gather_failed_until = TimerGetElapsed(tq_timer) + 15
+    call TraceAll("DBG GATHER ABORT: creepId=" + Int2Str(creep_debug_id) + " target=" + Int2Str(GetHandleId(target)) + " cooldown=15")
+  endif
+
   set ordinary_creep_attack_running = false
 
   call TraceAll("DBG CREEP END: id=" + Int2Str(creep_debug_id) + " fleeing=" + B2S(isfleeing) + " break=" + B2S(break_attack))
