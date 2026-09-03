@@ -4,6 +4,15 @@ function ResetGuardPositionJob takes unit u returns nothing
   call DisplayToAllJobDebug("RESET_GUARD_POSITION JOB START")
   call CreateDebugTag("RECYCLE Full", 10, u, 3.00, 1.50)
 
+  // A retreating unit has already spent its normal reset delay at home,
+  // but must not be returned to native guard control while the global
+  // retreat is still running. RecycleGuardPosition can send it away again.
+  if UnitAlive(u) and IsUnitInGroup(u, retreat_reset_pending) and isfleeing then
+    call TraceAll("DBG RESET DEFERRED: id=" + Int2Str(GetHandleId(u)) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
+    call TQAddUnitJob(5, RESET_GUARD_POSITION, 0, u)
+    return
+  endif
+
   call TraceAll("DBG RESET BEGIN: id=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " alive=" + B2S(UnitAlive(u)) + " order=" + Int2Str(GetUnitCurrentOrder(u)) + " army=" + Int2Str(GetArmyOfUnit(u)) + " captain=" + Int2Str(CaptainGroupSize()) + " attackRunning=" + B2S(attack_running) + " creepRunning=" + B2S(ordinary_creep_attack_running) + " creepId=" + Int2Str(creep_debug_id) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)) + " unavailable=" + B2S(IsRetreatUnavailableForAttack(u)))
 
   call RecycleGuardPosition(u)
