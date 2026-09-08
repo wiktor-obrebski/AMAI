@@ -8,7 +8,6 @@ function ResetGuardPositionJob takes unit u returns nothing
   // but must not be returned to native guard control while the global
   // retreat is still running. RecycleGuardPosition can send it away again.
   if UnitAlive(u) and IsUnitInGroup(u, retreat_reset_pending) and isfleeing then
-    call TraceAll("DBG RESET DEFERRED: id=" + Int2Str(GetHandleId(u)) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)))
     call TQAddUnitJob(5, RESET_GUARD_POSITION, 0, u)
     return
   endif

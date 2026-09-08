@@ -29,6 +29,9 @@
     boolean debug_retreat_transit_active = false
     group debug_retreat_transit_group = CreateGroup()
     location debug_retreat_origin = Location(0,0)
+
+    group debug_retreat_start_units = CreateGroup()
+    real debug_retreat_start_time = 0
 #ELSE
 
 function DebugStartRetreatTransitTracking takes nothing returns nothing
@@ -43,7 +46,9 @@ function DebugStartRetreatTransitTracking takes nothing returns nothing
   endif
   set debug_retreat_transit_id = debug_retreat_transit_id + 1
   set debug_retreat_transit_active = true
+  set debug_retreat_start_time = TimerGetElapsed(tq_timer)
   call GroupClear(debug_retreat_transit_group)
+  call GroupClear(debug_retreat_start_units)
 
   if enemy_loc != null and (GetLocationX(enemy_loc) != 0 or GetLocationY(enemy_loc) != 0) then
     call MoveLocation(debug_retreat_origin, GetLocationX(enemy_loc), GetLocationY(enemy_loc))
@@ -62,6 +67,7 @@ function DebugStartRetreatTransitTracking takes nothing returns nothing
     exitwhen u == null
 
     if UnitAlive(u) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) then
+      call GroupAddUnit(debug_retreat_start_units, u)
       set ul = GetUnitLoc(u)
       set dist_fight = DistanceBetweenPoints(ul, debug_retreat_origin)
       set dist_home = DistanceBetweenPoints(ul, captain_home)
@@ -289,15 +295,15 @@ if isfleeing or (town_threatened and town_threat_break) then
       // Only send standard (combat) units, skip peons/structures/heroes and units in healing/rescue groups
       if IsStandardUnit(u) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) and DistanceBetweenPoints(GetUnitLoc(u), captain_home) >= 650 then
         if GetUnitCurrentOrder(u) != OrderId("harvest") then
-          // track retreating units so we don't re-add them
-          if not IsUnitInGroup(u, in_retreat_group) and not IsUnitInGroup(u, retreat_reset_pending) then
-            call RemoveGuardPosition(u)
-            call GroupAddUnit(in_retreat_group, u)
+          if not IsUnitInGroup(u, retreat_reset_pending) then
+            if not IsUnitInGroup(u, in_retreat_group) then
+              call RemoveGuardPosition(u)
+              call GroupAddUnit(in_retreat_group, u)
+              call TQAddUnitJob(0, SEND_HOME, 1, u)
+            endif
 
-            // use p==1 to indicate forced retreat in SEND_HOME
-            call TQAddUnitJob(0, SEND_HOME, 1, u)
+            set num_units = num_units + 1
           endif
-          set num_units = num_units + 1
         endif
       endif
       call GroupRemoveUnit(g,u)
