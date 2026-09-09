@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - Undead will buy an orb of corruption if you have a lich.
 
 ### Fixed
+- Abort creep gathering when army tracking changes the native captain home, preserving the newer destination instead of restoring obsolete coordinates.
 - Keep retreating and recovering units out of normal micro, harassment and guard restoration; only the retreat reset job releases them after recovery.
 - Ensure all peons for pre-existing expansions are trained before expanding again.
 

@@ -16,6 +16,7 @@
     integer mode = 0
     integer most_threatened_player_town = -1
     location captain_home = null
+    integer captain_home_revision = 0 // Actual strategic native home writes, excluding temporary creep gathering.
     boolean captain_tp = true
     integer tmpmainarmy = -1
     integer town_threat_count = 0
@@ -43,6 +44,7 @@ function EnsureSetCaptainHome takes location target returns nothing
   endif
   if captain_home == null or GetLocationX(captain_home) != GetLocationX(target) or GetLocationY(captain_home) != GetLocationY(target) then
     call SetCaptainHome(BOTH_CAPTAINS, GetLocationX(target), GetLocationY(target))
+    set captain_home_revision = captain_home_revision + 1
   endif
 endfunction
 

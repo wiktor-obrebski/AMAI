@@ -25,6 +25,11 @@ def load_jass_function(env, path, name):
     args = source[0].split(' takes ')[1].split(' returns ')[0]
     args = '' if args == 'nothing' else ', '.join(a.split()[-1] for a in args.split(','))
     lines = [f'def {name}({args}):']
+    locals_ = set(re.findall(r'^\s*local \w+ (\w+)', '\n'.join(source), re.M))
+    assigned = set(re.findall(r'^\s*set (\w+)\s*=', '\n'.join(source), re.M))
+    globals_ = assigned - locals_ - set(args.split(', '))
+    if globals_:
+        lines.append('    global ' + ', '.join(sorted(globals_)))
     indent = 1
     for raw in source[1:-1]:
         line = raw.split('//')[0].strip()

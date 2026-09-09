@@ -13206,6 +13206,7 @@ function GatherForCreepAttack takes unit target returns boolean
   local real anchor_y = 0
   local real home_x = GetLocationX(captain_home)
   local real home_y = GetLocationY(captain_home)
+  local integer home_revision = captain_home_revision
 
   if major_hero == null or not UnitAlive(major_hero) then
     return true
@@ -13238,7 +13239,10 @@ function GatherForCreepAttack takes unit target returns boolean
     call Sleep(1)
     set waited = waited + 1
 
-    if town_threatened then
+    if captain_home_revision != home_revision then
+      // ARMY_TRACK replaced our gathering destination; CaptainIsHome now refers to that destination.
+      set aborted = true
+    elseif town_threatened then
       set aborted = true
     elseif target == null or not UnitAlive(target) then
       set aborted = true
@@ -13250,8 +13254,10 @@ function GatherForCreepAttack takes unit target returns boolean
     endif
   endloop
 
-  // Always restore the real captain home before leaving this function.
-  call SetCaptainHome(ATTACK_CAPTAIN, home_x, home_y)
+  // Restore only our own temporary override. A newer strategic home must survive cleanup.
+  if captain_home_revision == home_revision then
+    call SetCaptainHome(ATTACK_CAPTAIN, home_x, home_y)
+  endif
 
   if not gathered then
     // We formed a captain but decided not to launch it.
