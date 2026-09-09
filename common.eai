@@ -5922,6 +5922,22 @@ function GetOwnAttackStrength takes nothing returns integer
     return GetOwnStrength()
   endif
 
+  // Reserve lumber workers from the available pool, not from all living Ghouls.
+  // Otherwise harvesting Ghouls can fill slots belonging to retreat-locked fighters.
+  // Count each living locked Ghoul once, even if it belongs to both retreat groups.
+  if max_ghouls > 0 then
+    call GroupEnumUnitsOfPlayer(g, ai_player, null)
+    loop
+      set u = FirstOfGroup(g)
+      exitwhen u == null
+      if GetUnitTypeId(u) == old_id[racial_ghoul] and UnitAlive(u) and IsRetreatUnavailableForAttack(u) then
+        set max_ghouls = max_ghouls - 1
+      endif
+      call GroupRemoveUnit(g, u)
+    endloop
+    set max_ghouls = Max(max_ghouls, 0)
+  endif
+
   call GroupEnumUnitsOfPlayer(g, ai_player, null)
 
   loop

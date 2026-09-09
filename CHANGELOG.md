@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - Undead will buy an orb of corruption if you have a lich.
 
 ### Fixed
+- Exclude living retreat-unavailable Ghouls from the ready attack-strength quota so lumber workers cannot replace them in the estimate.
 - Ensure all peons for pre-existing expansions are trained before expanding again.
 
 ## [3.6.0] - 2026-02-08
