@@ -45,7 +45,7 @@ function GroupMicroSystem takes group g, group meleeg, group focus_group returns
     set unitloc = GetUnitLoc(u)
     set copy = CopyGroup(meleeg)
     set melee = GetNearestOfGroup(melee, copy, unitloc)
-    if melee != null and not IsUnitInGroup(u, focus_fire_group) and IsUnitFacingUnit(melee, u) and DistanceBetweenUnits(u, melee) < 200 and GetUnitMoveSpeed(melee) <= GetUnitMoveSpeed(u) and (not IsUnitType(u, UNIT_TYPE_FLYING) or (IsUnitType(u, UNIT_TYPE_FLYING) and IsUnitType(melee, UNIT_TYPE_ATTACKS_FLYING))) then // 220 is the smallest ranged unit in warcraft 3.
+    if not IsRetreatOrderLocked(u) and melee != null and not IsUnitInGroup(u, focus_fire_group) and IsUnitFacingUnit(melee, u) and DistanceBetweenUnits(u, melee) < 200 and GetUnitMoveSpeed(melee) <= GetUnitMoveSpeed(u) and (not IsUnitType(u, UNIT_TYPE_FLYING) or (IsUnitType(u, UNIT_TYPE_FLYING) and IsUnitType(melee, UNIT_TYPE_ATTACKS_FLYING))) then // 220 is the smallest ranged unit in warcraft 3.
       set l = GetSubtractionLoc_kd(unitloc, GetUnitLoc(melee))
       set l = GetProjectedLoc_dd(unitloc, l, 800)
       call RemoveGuardPosition(u)
@@ -328,8 +328,8 @@ function FocusFireJob takes nothing returns nothing
    loop
       set u = FirstOfGroup(windwalk_group)
       exitwhen u == null
-      if IsUnitVisible(u, Player(PLAYER_NEUTRAL_AGGRESSIVE)) and not IsUnitInGroup(u, unit_healing) and not IsUnitInGroup(u, unit_rescueing ) and not IsUnitInGroup(u, unit_harassing ) and not IsUnitInGroup(u, unit_zepplin_move ) then
-        call RecycleGuardPosition(u)
+      if IsUnitVisible(u, Player(PLAYER_NEUTRAL_AGGRESSIVE)) and IsStandardUnit(u) then
+        call RecycleGuardPositionAM(u)
         if attack_running and not isfleeing then
             call AddAssault(1, GetUnitTypeId(u))
         endif

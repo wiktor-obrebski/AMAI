@@ -29,6 +29,9 @@ local integer detectedenemies = 0
 local integer enemiesatfountain = 0
 local boolean creepsawake = false
 
+  if IsRetreatOrderLocked(u) then
+    return
+  endif
   call DisplayToAllJobDebug("MANA_FOUNTAIN Start")
   // if fountain == null then
   //   set fountain = nearest_neutral[NEUTRAL_MANA_FOUNTAIN]

@@ -28,14 +28,14 @@ function ZeppelinFollowJob takes nothing returns nothing
     set g = null
   endif
 
-  if follow_zeppelin == null or IsUnitBuying(follow_zeppelin) or not UnitAlive(follow_zeppelin) or IsUnitInGroup(follow_zeppelin, unit_rescueing) or IsUnitInGroup(follow_zeppelin, unit_zepplin_move) then
+  if follow_zeppelin == null or IsRetreatOrderLocked(follow_zeppelin) or IsUnitBuying(follow_zeppelin) or not UnitAlive(follow_zeppelin) or IsUnitInGroup(follow_zeppelin, unit_rescueing) or IsUnitInGroup(follow_zeppelin, unit_zepplin_move) then
     set follow_zeppelin = null
     call TQAddJob(10, ZEPPELIN_FOLLOW, 0)
     set zeppelin_following = false
     return
   endif
   if (major_hero == null or not UnitAlive(major_hero)) then
-    call RecycleGuardPosition(follow_zeppelin) // Not being used by other zepplin control so recycle position
+    call RecycleGuardPositionAM(follow_zeppelin) // Not being used by other zepplin control so recycle position
     set follow_zeppelin = null
     call TQAddJob(10, ZEPPELIN_FOLLOW, 0)
     set zeppelin_following = false
@@ -62,7 +62,7 @@ function ZeppelinFollowJob takes nothing returns nothing
     if b == false then
       call IssuePointOrder(follow_zeppelin, "unloadall", GetLocationX(l) + GetRandomReal(-200,200), GetLocationY(l) + GetRandomReal(-200,200)) 
     endif
-    call RecycleGuardPosition(follow_zeppelin)
+    call RecycleGuardPositionAM(follow_zeppelin)
     call TQAddJob(10,ZEPPELIN_FOLLOW,0)
   endif
 

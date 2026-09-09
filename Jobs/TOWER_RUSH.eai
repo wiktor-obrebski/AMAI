@@ -36,7 +36,7 @@ function TowerRushRecoveryBuild takes nothing returns nothing
 	loop
 		exitwhen i > race_tower_peon
 		call IssuePointOrderLoc(builder[i], "move", home_location)
-		call RecycleGuardPosition(builder[i])
+		call RecycleGuardPositionAM(builder[i])
 		set builder[i] = null
 		set i = i + 1
 	endloop
@@ -52,6 +52,9 @@ function TowerRushHeroControl_k takes unit u, location t returns nothing
 	local item it = null
 	local unit loccheck = null
 	local location unitloc = null
+	if IsRetreatOrderLocked(u) then
+		return
+	endif
 	set l = GetUnitLoc(u)
 	if not tower_peon_inplace then
 		call CreateDebugTag("TRush: hero moving", 10, u, 4.00, 2.00)
@@ -123,7 +126,7 @@ function TowerRushBuilderControl_k takes unit u, location t returns nothing
 			call CreateDebugTag("TRush: prerequisites missing, recycling peon", 10, u, 4.00, 2.00)
 			call RemoveLocation(l)
 			set l = null
-			call RecycleGuardPosition(u)
+			call RecycleGuardPositionAM(u)
 			return
 		else
 			call RemoveLocation(l)
@@ -454,7 +457,7 @@ function TowerRushJob takes nothing returns nothing
 					exitwhen i > race_tower_peon
 					if builder[i] != null and UnitAlive(builder[i]) then
 						call IssuePointOrderLoc(builder[i], "move", home_location)
-						call RecycleGuardPosition(builder[i])
+						call RecycleGuardPositionAM(builder[i])
 					endif
 					set builder[i] = null
 					set i = i + 1
@@ -476,7 +479,7 @@ function TowerRushJob takes nothing returns nothing
 			call SetItemPawnable(GetItemOfTypeOnUnit(race_tower_item, builder[0]), true)  //can selling
 			call SetItemDroppable(GetItemOfTypeOnUnit(race_tower_item, builder[0]), true)  //droppable
 		endif
-		call RecycleGuardPosition(builder[0])
+		call RecycleGuardPositionAM(builder[0])
 		set builder[0] = null
 		set builder[10] = null
 		set rushedplayer = null
@@ -508,7 +511,7 @@ function TowerRushJob takes nothing returns nothing
 	endif
 
 	if builder[0] != null and UnitAlive(builder[0]) and GetItemOfTypeOnUnit(race_item_expansion_item_id, builder[0]) == null then
-		call RecycleGuardPosition(builder[0])  //prevent item change hero
+		call RecycleGuardPositionAM(builder[0])  //prevent item change hero
 	endif
 	if builder[0] == null and race_tower_item != 0 then
 		set it = GetItemOfType(it,race_tower_item)
@@ -688,9 +691,9 @@ function TowerRushJob takes nothing returns nothing
 		call GroupRemoveUnit(tower_rush_power,builder[41])  // give AI 2 peon build other construct
 		call GroupRemoveUnit(tower_rush_power,builder[42])
 		call GroupRemoveUnit(tower_rush_power,builder[43])
-		call RecycleGuardPosition(builder[41])
-		call RecycleGuardPosition(builder[42])
-		call RecycleGuardPosition(builder[43])
+		call RecycleGuardPositionAM(builder[41])
+		call RecycleGuardPositionAM(builder[42])
+		call RecycleGuardPositionAM(builder[43])
 		loop
 			set u = FirstOfGroup(tempg)
 			exitwhen u == null
@@ -713,7 +716,7 @@ function TowerRushJob takes nothing returns nothing
 		if builder[0] != null and GetItemNumberOnUnit(race_tower_item, builder[0]) > 0 and GetUnitState(builder[0], UNIT_STATE_LIFE) >= 1 then
 			call Trace("Tower Rush: Spread Blight")
 			if GetItemNumberOnUnit(race_tower_item, builder[0]) == 0 or GetUnitState(builder[0], UNIT_STATE_LIFE) < GetUnitState(builder[0], UNIT_STATE_MAX_LIFE) * 0.5 or teleporting or town_threatened then
-				call RecycleGuardPosition(builder[0])
+				call RecycleGuardPositionAM(builder[0])
 			else 
 				call TowerRushHeroControl_k(builder[0], t)
 			endif

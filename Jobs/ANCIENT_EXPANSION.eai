@@ -31,7 +31,7 @@ function AncientExpansionJob takes nothing returns nothing
     set ancient_exp_mine = null
     set ancient_exp_unit = null
     if UnitAlive(ancient_exp_wisp) then
-      call RecycleGuardPosition(ancient_exp_wisp)
+      call RecycleGuardPositionAM(ancient_exp_wisp)
     endif    
     set ancient_exp_wisp = null
     set ancient_exp_loc = null
@@ -159,7 +159,7 @@ function AncientExpansionJob takes nothing returns nothing
       call IssueTargetOrder(ancient_exp_unit, "entangle", ancient_exp_mine)
       set anc_retry = anc_retry + 1
     elseif UnitAlive(ancient_exp_unit) and GetUnitCurrentOrder(ancient_exp_unit) != OrderId("entangle") then
-      call RecycleGuardPosition(ancient_exp_unit)
+      call RecycleGuardPositionAM(ancient_exp_unit)
       set ancient_exp_state = 4
     endif
     call TQAddJob(10, ANCIENT_EXPANSION, 0)
