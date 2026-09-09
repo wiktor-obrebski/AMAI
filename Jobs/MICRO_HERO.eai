@@ -290,7 +290,22 @@ function SaveHero takes integer hn , integer armyOfHero returns nothing
 endfunction
 
 function HeroBugFixHealthCheck takes integer hn returns boolean
-  return GetUnitState(hero_unit[hn], UNIT_STATE_LIFE) >= 0.80 * GetUnitState(hero_unit[hn], UNIT_STATE_MAX_LIFE) and IsUnitInGroup(hero_unit[hn], unit_healing)
+  return not IsRetreatOrderLocked(hero_unit[hn]) and GetUnitState(hero_unit[hn], UNIT_STATE_LIFE) >= 0.80 * GetUnitState(hero_unit[hn], UNIT_STATE_MAX_LIFE) and IsUnitInGroup(hero_unit[hn], unit_healing)
+endfunction
+
+// Emergency rescue only. Never reassign a locked hero to offense or town defense.
+function RescueRetreatHero takes integer hn returns nothing
+  local unit u = hero_unit[hn]
+  if not UnitAlive(u) or not IsRetreatOrderLocked(u) or IsRetreatTeleporting(u) or teleporting then
+    set u = null
+    return
+  endif
+  if GetUnitState(u, UNIT_STATE_LIFE) < RMax(flee_health_percentage * GetUnitState(u, UNIT_STATE_MAX_LIFE), flee_minimum_health) then
+    if not TryRetreatHealingItem(u, false) and GetItemNumberOnUnit(tp_item, u) > 0 and DistanceBetweenPoints_dk(GetUnitLoc(u), captain_home) > 2000 and GetLocationNonCreepStrength(GetUnitX(u), GetUnitY(u), 800) > 0 then
+      call TeleportHome(hn)
+    endif
+  endif
+  set u = null
 endfunction
 
 function MicroHeroJob takes integer hn returns nothing
@@ -305,7 +320,7 @@ function MicroHeroJob takes integer hn returns nothing
     // A Temporary Bug fix
     if HeroBugFixHealthCheck(hn) then
       call CreateDebugTag("HERO: Healing Bug Fix Job", 10, hero_unit[hn], 4.00, 2.00)
-      call RecycleGuardPosition(hero_unit[hn])
+      call RecycleGuardPositionAM(hero_unit[hn])
       call GroupRemoveUnit(unit_healing, hero_unit[hn])
     endif
     //
@@ -349,6 +364,11 @@ function MicroHeroJob takes integer hn returns nothing
   //  call DisplayToAll(Int2Str(R2I(hero_enemy_density[hn] * 10)))
   //  call DisplayToAll(Int2Str(R2I(DistanceBetweenPoints(hero_enemy_loc[hn],GetUnitLoc(hero_unit[hn])))))
 
+    if IsRetreatOrderLocked(hero_unit[hn]) then
+      call RescueRetreatHero(hn)
+      call TQAddJob(1 * sleep_multiplier, MICRO_HERO, hn)
+      return
+    endif
     set teleportdistance = DistanceBetweenPoints(hero_loc[hn], town_loc[most_threatened_town])
     if not teleporting and GetUnitState(hero_unit[hn], UNIT_STATE_LIFE) < RMax(flee_health_percentage * GetUnitState(hero_unit[hn], UNIT_STATE_MAX_LIFE), flee_minimum_health) and not IsUnitInGroup(hero_unit[hn], unit_healing) then
       call SaveHero(hn,armyOfHero)

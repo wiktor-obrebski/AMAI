@@ -4157,8 +4157,22 @@ endfunction
 //==========================================================================
 // (AMAI)	SelectByUserData
 //==========================================================================
+// Retreat owns a unit until its own arrival/reset job releases it.
+function IsRetreatOrderLocked takes unit u returns boolean
+  return IsUnitInGroup(u, in_retreat_group) or IsUnitInGroup(u, retreat_reset_pending)
+endfunction
+
+// Delayed cleanup from another subsystem must not restore native control.
+function RecycleGuardPositionAM takes unit u returns nothing
+  if not IsRetreatOrderLocked(u) then
+    call RecycleGuardPosition(u)
+  endif
+endfunction
+
 function IsStandardUnit takes unit u returns boolean
-  if IsUnitInGroup(u, unit_healing) then
+  if IsRetreatOrderLocked(u) then
+    return false
+  elseif IsUnitInGroup(u, unit_healing) then
     return false
   elseif IsUnitInGroup(u, unit_rescueing) then
     return false
@@ -4362,7 +4376,7 @@ function GroupRecycleGuardPositionInstant takes group g returns nothing
   loop
     set u = FirstOfGroup(g)
     exitwhen u == null
-    call RecycleGuardPosition(u)
+    call RecycleGuardPositionAM(u)
     call GroupRemoveUnit(g,u)
   endloop
   call DestroyGroup(g)
@@ -4373,8 +4387,10 @@ function GroupRecycleHarrassPositionInstant takes group g returns nothing
   loop
     set u = FirstOfGroup(g)
     exitwhen u == null
-    call RecycleGuardPosition(u)
-    call AddAssault(1, GetUnitTypeId(u))
+    if not IsRetreatOrderLocked(u) then
+      call RecycleGuardPositionAM(u)
+      call AddAssault(1, GetUnitTypeId(u))
+    endif
     call GroupRemoveUnit(unit_harassing, u)
     call GroupRemoveUnit(g,u)
   endloop
@@ -4387,7 +4403,7 @@ function GroupRecycleGuardPositionByStandard takes group g returns nothing
     set u = FirstOfGroup(g)
     exitwhen u == null
     if IsStandardUnit(u) then
-      call RecycleGuardPosition( u )
+      call RecycleGuardPositionAM( u )
     endif
     call GroupRemoveUnit(g, u )
   endloop
@@ -5299,7 +5315,7 @@ function GetMajorHero takes unit u returns unit
   local integer i = 1
   loop
     exitwhen i > 3
-    if hero_built[i] and UnitAlive(hero_unit[i]) and not IsUnitInGroup(hero_unit[i], unit_healing) then
+    if hero_built[i] and UnitAlive(hero_unit[i]) and not IsRetreatOrderLocked(hero_unit[i]) and not IsUnitInGroup(hero_unit[i], unit_healing) then
       return hero_unit[i]
     endif
     set i = i + 1
@@ -5314,7 +5330,7 @@ function GetMajorHeroReplacement_d takes unit u, location l returns unit
 
   loop
     exitwhen i > 3
-    if hero_built[i] and UnitAlive(hero_unit[i]) and IsUnitInRangeLoc(hero_unit[i], l, battle_radius) and not IsUnitInGroup(hero_unit[i], unit_healing) then
+    if hero_built[i] and UnitAlive(hero_unit[i]) and not IsRetreatOrderLocked(hero_unit[i]) and IsUnitInRangeLoc(hero_unit[i], l, battle_radius) and not IsUnitInGroup(hero_unit[i], unit_healing) then
       call RemoveLocation(l)
       return hero_unit[i]
     endif
@@ -5330,7 +5346,7 @@ function GetMajorHeroReplacement_k takes unit u, location l returns unit
 
   loop
     exitwhen i > 3
-    if hero_built[i] and UnitAlive(hero_unit[i]) and IsUnitInRangeLoc(hero_unit[i], l, battle_radius) and not IsUnitInGroup(hero_unit[i], unit_healing) then
+    if hero_built[i] and UnitAlive(hero_unit[i]) and not IsRetreatOrderLocked(hero_unit[i]) and IsUnitInRangeLoc(hero_unit[i], l, battle_radius) and not IsUnitInGroup(hero_unit[i], unit_healing) then
       return hero_unit[i]
     endif
     set i = i + 1
@@ -5862,7 +5878,7 @@ endfunction
 
 //============================================================================
 function IsRetreatUnavailableForAttack takes unit u returns boolean
-  return IsUnitInGroup(u, in_retreat_group) or IsUnitInGroup(u, retreat_reset_pending)
+  return IsRetreatOrderLocked(u)
 endfunction
 
 function GetHeroBonusStrengthForUnit takes unit u returns integer
@@ -7831,7 +7847,7 @@ function GetHeroToBuyItem takes unit shop, real limit, boolean is_healing_includ
   local integer i = 1
   loop
     exitwhen i > 3
-    if hero_built[i] and UnitAlive(hero_unit[i]) then
+    if hero_built[i] and UnitAlive(hero_unit[i]) and not IsRetreatOrderLocked(hero_unit[i]) then
      if GetSlotsFreeOnUnit(hero_unit[i]) > 0 and DistanceBetweenUnits(hero_unit[i], shop) < limit and not IsUnitInGroup(hero_unit[i], unit_buying_tavern) and not IsUnitInGroup(hero_unit[i], unit_buying_merc) and not IsUnitInGroup(hero_unit[i], unit_harassing) then
        if is_healing_included == true and IsUnitInGroup(hero_unit[i], unit_healing) then
        else
@@ -7851,7 +7867,7 @@ function GetItemHero takes item it returns unit
     loop
       exitwhen i > 3 or it == null
       if hero_built[i] and UnitAlive(hero_unit[i]) then
-        if UnitHasItem(hero_unit[i], it) then
+        if UnitHasItem(hero_unit[i], it) and not IsRetreatOrderLocked(hero_unit[i]) then
           return hero_unit[i]
         endif
       endif
@@ -7917,7 +7933,7 @@ endfunction
 //============================================================================
 function HealUnit takes unit healer, unit to_heal, boolean hero_heal returns nothing
   local integer id = GetHealerId(GetUnitTypeId(healer))
-  if id != -1 and healer_type[id] != HEALER_TYPE_NO_TARGET then
+  if not IsRetreatOrderLocked(healer) and id != -1 and healer_type[id] != HEALER_TYPE_NO_TARGET then
     if healer_type[id] == HEALER_TYPE_WARD then
       if not ward_cast then
         call IssuePointOrderById(healer, healer_spell[id], GetUnitX(healer), GetUnitY(healer))
@@ -8072,6 +8088,82 @@ function GetItemInstantType takes integer id returns integer
 #ENDINCLUDE
 	endif
 	return 0
+endfunction
+
+// Retreat rescue must not interrupt an item TP or Mass Teleport already in progress.
+function IsRetreatTeleporting takes unit u returns boolean
+  local integer order = GetUnitCurrentOrder(u)
+  if order == OrderId("massteleport") then
+    return true
+  endif
+  if tp_item != 0 and order >= 852008 and order <= 852013 then
+    return GetItemTypeId(UnitItemInSlot(u, order - 852008)) == old_id[tp_item]
+  endif
+  return false
+endfunction
+
+// Only self/area healing: never sacrifice another unit or move toward a shop.
+// The caller controls retry timing; continuous items are reserved for quiet recovery.
+function TryRetreatHealingItem takes unit u, boolean recovery returns boolean
+  local item it = null
+  if not UnitAlive(u) or not IsRetreatOrderLocked(u) or IsRetreatTeleporting(u) then
+    return false
+  endif
+  if GetUnitState(u, UNIT_STATE_LIFE) >= 0.80 * GetUnitState(u, UNIT_STATE_MAX_LIFE) then
+    return false
+  endif
+#INCLUDETABLE <$VER$\HealingItems.txt> #EFR #COND ("%3" eq "HEALINGITEM_HERO" or "%3" eq "HEALINGITEM_MASS" or "%3" eq "MERCHANTITEM_MASS" or "%3" eq "HEALINGITEM_SINGLE") and "%1" ne "RITUAL_DAGGER"
+  if ("%4" == "SUDDEN" or recovery) then
+    set it = GetItemOfTypeOnUnit(u%1, u)
+    if it != null then
+      if UnitUseItem(u, it) then
+        set it = null
+        return true
+      endif
+      if UnitUseItemTarget(u, it, u) then
+        set it = null
+        return true
+      endif
+    endif
+  endif
+#ENDINCLUDE
+  set it = null
+  return false
+endfunction
+
+// Healing stays at the recovery location. Order the nearby well, not the patient.
+function RetreatRecovery takes unit u returns boolean
+  local group g = null
+  local unit well = null
+  if not UnitAlive(u) or not IsUnitInGroup(u, retreat_reset_pending) or IsRetreatTeleporting(u) then
+    return false
+  endif
+  if GetUnitState(u, UNIT_STATE_LIFE) >= 0.80 * GetUnitState(u, UNIT_STATE_MAX_LIFE) then
+    return false
+  endif
+  if GetLocationNonCreepStrength(GetUnitX(u), GetUnitY(u), 800) > 0 then
+    return false
+  endif
+  if TryRetreatHealingItem(u, true) then
+    return true
+  endif
+  if race_has_moonwells then
+    set g = CreateGroup()
+    call GroupEnumUnitsInRange(g, GetUnitX(u), GetUnitY(u), 200, null)
+    loop
+      set well = FirstOfGroup(g)
+      exitwhen well == null
+      if GetOwningPlayer(well) == ai_player and UnitAlive(well) and GetUnitTypeId(well) == old_id[racial_farm] and GetUnitState(well, UNIT_STATE_MANA) >= 10 then
+        call IssueTargetOrder(well, "replenish", u)
+        exitwhen true
+      endif
+      call GroupRemoveUnit(g, well)
+    endloop
+    call DestroyGroup(g)
+  endif
+  set g = null
+  set well = null
+  return false
 endfunction
 
 //    Gets items that the hero can use to heal itself. Otherwise tries the racial items.
@@ -10703,24 +10795,11 @@ endfunction
 
 function AddHarassUnittype takes group g, group harasser, integer qty, integer uid, integer key returns group
   local group cg = CopyGroup(g)
-  local group fg = CreateGroup()
   local unit u = null
   local real player_sum = 0
   set cg = SelectNumberOfId(cg, qty, old_id[uid])
   set cg = SelectByUnitFree(cg, true)
-  set cg = SelectByUnitStandard(cg, true) // Will ensure units are not already harassing somewhere else
-  // Do not allow units currently controlled by retreat control to be selected for harass
-  loop
-    set u = FirstOfGroup(cg)
-    exitwhen u == null
-    if not IsUnitInGroup(u, in_retreat_group) then
-      call GroupAddUnit(fg, u)
-    endif
-    call GroupRemoveUnit(cg, u)
-  endloop
-  call DestroyGroup(cg)
-  set cg = fg
-  set fg = null
+  set cg = SelectByUnitStandard(cg, true) // Excludes retreat-owned units and units already assigned elsewhere
   loop
     set u = FirstOfGroup(cg)
     exitwhen u == null
@@ -11575,7 +11654,7 @@ function BuildMovePeonZeppelin takes unit peon, unit target returns boolean
     endif
   else
     if DistanceBetweenUnits(peon, target) < race_max_expa_mine_distance then
-      call RecycleGuardPosition(build_zeppelin)
+      call RecycleGuardPositionAM(build_zeppelin)
       call GroupRemoveUnit(unit_zepplin_move, build_zeppelin)
       call IssueImmediateOrder(peon, "stop")
       return true
@@ -13219,6 +13298,7 @@ function GatherForCreepAttack takes unit target returns boolean
   local real anchor_y = 0
   local real home_x = GetLocationX(captain_home)
   local real home_y = GetLocationY(captain_home)
+  local integer home_revision = captain_home_revision
 
   if major_hero == null or not UnitAlive(major_hero) then
     return true
@@ -13251,7 +13331,10 @@ function GatherForCreepAttack takes unit target returns boolean
     call Sleep(1)
     set waited = waited + 1
 
-    if town_threatened then
+    if captain_home_revision != home_revision then
+      // ARMY_TRACK replaced our gathering destination; CaptainIsHome now refers to that destination.
+      set aborted = true
+    elseif town_threatened then
       set aborted = true
     elseif target == null or not UnitAlive(target) then
       set aborted = true
@@ -13263,8 +13346,10 @@ function GatherForCreepAttack takes unit target returns boolean
     endif
   endloop
 
-  // Always restore the real captain home before leaving this function.
-  call SetCaptainHome(ATTACK_CAPTAIN, home_x, home_y)
+  // Restore only our own temporary override. A newer strategic home must survive cleanup.
+  if captain_home_revision == home_revision then
+    call SetCaptainHome(ATTACK_CAPTAIN, home_x, home_y)
+  endif
 
   if not gathered then
     // We formed a captain but decided not to launch it.
@@ -14572,7 +14657,7 @@ function HeroHealingBugFix takes nothing returns nothing
     exitwhen i > 3
     if HeroBugFixHealthCheck(i) then
       call Trace("HERO: Healing Bug Fix")
-      call RecycleGuardPosition(hero_unit[i])
+      call RecycleGuardPositionAM(hero_unit[i])
       call GroupRemoveUnit(unit_healing, hero_unit[i])
     endif
     set i = i + 1
@@ -14670,10 +14755,28 @@ endfunction
 //============================================================================
 //     Orders unit to use the given mass healing item
 
+function GroupPointOrderAvailable takes group g, string order, real x, real y returns nothing
+  local group cg = CopyGroup(g)
+  local unit u = null
+  loop
+    set u = FirstOfGroup(cg)
+    exitwhen u == null
+    if not IsRetreatOrderLocked(u) then
+      call IssuePointOrder(u, order, x, y)
+    endif
+    call GroupRemoveUnit(cg, u)
+  endloop
+  call DestroyGroup(cg)
+  set cg = null
+endfunction
+
 function ApplyMassHealingItem takes unit u, item mh_i returns nothing
   local unit hu = null
   local real time = 0
 
+  if IsRetreatOrderLocked(u) then
+    return
+  endif
   set hu = FirstOfGroup(urgent_healing_group)
   if hu == null then
     set hu = FirstOfGroup(medium_healing_group)
@@ -14686,14 +14789,16 @@ function ApplyMassHealingItem takes unit u, item mh_i returns nothing
   endif
 
   call RemoveGuardPosition(u)
-  call GroupPointOrder(urgent_healing_group, "move", GetUnitX(u), GetUnitY(u))
-  call GroupPointOrder(medium_healing_group, "move", GetUnitX(u), GetUnitY(u))
-  call GroupPointOrder(small_healing_group, "move", GetUnitX(u), GetUnitY(u))
+  call GroupPointOrderAvailable(urgent_healing_group, "move", GetUnitX(u), GetUnitY(u))
+  call GroupPointOrderAvailable(medium_healing_group, "move", GetUnitX(u), GetUnitY(u))
+  call GroupPointOrderAvailable(small_healing_group, "move", GetUnitX(u), GetUnitY(u))
   call IssuePointOrder(u, "move", GetUnitX(hu), GetUnitY(hu))
   set time = RMax((GetTimeToReachUnit(u, hu) + GetTimeToReachUnit(hu, u)) / 2,2)    // Average of times. Not accurate as is longer than it should be to definatly make sure units surround the hero
   call Sleep(time)
-  call UnitUseItem(u, mh_i)
-  call RecycleGuardPosition(u)
+  if not IsRetreatOrderLocked(u) then
+    call UnitUseItem(u, mh_i)
+  endif
+  call RecycleGuardPositionAM(u)
   set hu = null
 endfunction
 
@@ -14704,25 +14809,28 @@ function ApplyHealingItem takes unit u, item heal_item returns nothing
 	local unit target = null
 	local group urgent = null
 	local group medium = null
+	if IsRetreatOrderLocked(u) then
+		return
+	endif
 	set urgent = CopyGroup(urgent_healing_group)
 	set medium = CopyGroup(medium_healing_group)
 	call RemoveGuardPosition(u)
-	call GroupPointOrder(urgent_healing_group, "move", GetUnitX(u), GetUnitY(u))
-	call GroupPointOrder(medium_healing_group, "move", GetUnitX(u), GetUnitY(u))
-	call GroupPointOrder(small_healing_group, "move", GetUnitX(u), GetUnitY(u))
+	call GroupPointOrderAvailable(urgent_healing_group, "move", GetUnitX(u), GetUnitY(u))
+	call GroupPointOrderAvailable(medium_healing_group, "move", GetUnitX(u), GetUnitY(u))
+	call GroupPointOrderAvailable(small_healing_group, "move", GetUnitX(u), GetUnitY(u))
 	call Sleep(5 * sleep_multiplier)
 	if false then
 	#INCLUDETABLE <$VER$\HealingItems.txt> #EFR #COND "%1" eq "uRITUAL_DAGGER"
 	elseif GetItemTypeId(heal_item) == old_id[%1] then  //prevent killing high health units
 		set target = FirstOfGroup(urgent)
-		if target != null then
+		if target != null and not IsRetreatOrderLocked(u) then
 			call UnitUseItemTarget(u, heal_item, target)
 			call GroupRemoveUnit(urgent, target)
 		endif
 	#ENDINCLUDE
 	else
 		loop
-			exitwhen not UnitHasItem(u, heal_item)
+			exitwhen not UnitHasItem(u, heal_item) or IsRetreatOrderLocked(u)
 			set target = FirstOfGroup(urgent)
 			if target != null then
 				call UnitUseItemTarget(u, heal_item, target)
@@ -14738,7 +14846,7 @@ function ApplyHealingItem takes unit u, item heal_item returns nothing
 			call Sleep(2 * sleep_multiplier)
 		endloop
 	endif
-	call RecycleGuardPosition(u)
+	call RecycleGuardPositionAM(u)
 	call DestroyGroup(urgent)
 	call DestroyGroup(medium)
 	set urgent = null
@@ -14749,7 +14857,9 @@ endfunction
 //============================================================================
 //  Orders unit to use an item that does a global healing effect
 function ApplyGlobalItem takes unit u, item heal_item returns nothing
-  call UnitUseItem(u, heal_item)
+  if not IsRetreatOrderLocked(u) then
+    call UnitUseItem(u, heal_item)
+  endif
 endfunction
 //============================================================================
 function HealArmy takes nothing returns nothing

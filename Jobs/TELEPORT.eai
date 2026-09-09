@@ -46,7 +46,7 @@ function TeleportJob takes unit hu returns nothing
   loop
     set u = FirstOfGroup(g)
     exitwhen u == null
-    if DistanceBetweenUnits(hu, u) > teleport_radius then
+    if not IsRetreatOrderLocked(u) and DistanceBetweenUnits(hu, u) > teleport_radius then
       call IssuePointOrder(u, "move", GetUnitX(hu), GetUnitY(hu))
     endif
     call GroupRemoveUnit(g, u)

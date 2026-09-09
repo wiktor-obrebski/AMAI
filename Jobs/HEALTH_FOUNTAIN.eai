@@ -30,6 +30,9 @@ local integer detectedenemies = 0
 local integer enemiesatfountain = 0
 local boolean creepsawake = false
 
+  if IsRetreatOrderLocked(u) then
+    return
+  endif
   call DisplayToAllJobDebug("HEALTH_FOUNTAIN Start")
 
   call RemoveGuardPosition(u)

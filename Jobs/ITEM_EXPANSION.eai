@@ -16,13 +16,17 @@ function ItemExpansionJob takes nothing returns nothing
   local item exp_item = null
   local integer time_next_try = 5
   if (itemhero != null and GetUnitState(itemhero, UNIT_STATE_LIFE) <= 0) or town_threatened or current_expansion == null then
-    call RecycleGuardPosition(itemhero)
+    call RecycleGuardPositionAM(itemhero)
     call Trace("Expansion cannot or no Expansion")  // no call ChooseExpansion() , this is passive expansion , avoidance buy repeat item
     set item_job_running = false
     set item_expanding = false
     set expitem_buy = false
     set item_exp_state = 0
     set itemhero = null
+    return
+  endif
+  if IsRetreatOrderLocked(itemhero) then
+    call TQAddJob(5, ITEM_EXPANSION, 0)
     return
   endif
   set exp_time_count = ai_time
@@ -79,7 +83,7 @@ function ItemExpansionJob takes nothing returns nothing
           set item_job_running = false
           set item_exp_state = 0
           set itemhero = null
-          call RecycleGuardPosition(itemhero)
+          call RecycleGuardPositionAM(itemhero)
           call MarkBadExpansion(current_expansion)
           return
       else
@@ -104,7 +108,7 @@ function ItemExpansionJob takes nothing returns nothing
       set item_exp_loc = null
     else
       call Trace("Expansion Done")
-      call RecycleGuardPosition(itemhero)
+      call RecycleGuardPositionAM(itemhero)
       set item_expanding = false
       set item_job_running = false
       set expitem_buy = false

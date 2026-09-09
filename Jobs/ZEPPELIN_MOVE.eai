@@ -36,10 +36,10 @@ function ZeppelinMoveJob takes integer target, unit hu, group z returns nothing
   local location zeploc = null
   local location heroloc = null
   local integer clearvars = 0  //=1.. Zepplin system can now finish so return
-  if GetUnitState(hu, UNIT_STATE_LIFE) <= 0 then
+  if GetUnitState(hu, UNIT_STATE_LIFE) <= 0 or IsRetreatOrderLocked(hu) or IsRetreatOrderLocked(zep) then
     call GroupRemoveUnit(unit_rescueing, zep)
     call GroupRemoveUnit(unit_zepplin_move, zep)
-    call RecycleGuardPosition(zep)
+    call RecycleGuardPositionAM(zep)
     call TQAddUnitJob(2, RESET_GUARD_POSITION, 80, hu)
     call DestroyGroup(z)
     set zep = null
@@ -95,7 +95,7 @@ function ZeppelinMoveJob takes integer target, unit hu, group z returns nothing
   if clearvars == 1 then
     call GroupRemoveUnit(unit_rescueing, zep)
     call GroupRemoveUnit(unit_zepplin_move, zep)
-    call RecycleGuardPosition(zep)
+    call RecycleGuardPositionAM(zep)
     set zep = null
     call DestroyGroup(z)
     set zepdropping = false

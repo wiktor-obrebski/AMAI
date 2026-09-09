@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Fixed
 - Preserve creep-selection state across diagnostic strength queries so creep-start logging cannot change the alliance-target/chat decision.
 - Exclude living retreat-unavailable Ghouls from the ready attack-strength quota so lumber workers cannot replace them in the estimate.
+- Preserve retreat ownership while allowing emergency hero healing and home teleport; support local recovery without shopping or offensive reassignment.
+- Abort creep gathering when army tracking changes the native captain home, preserving the newer destination instead of restoring obsolete coordinates.
+- Keep retreating and recovering units out of normal micro, harassment and guard restoration; only the retreat reset job releases them after recovery.
 - Ensure all peons for pre-existing expansions are trained before expanding again.
 
 ## [3.6.0] - 2026-02-08

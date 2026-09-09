@@ -292,8 +292,8 @@ if isfleeing or (town_threatened and town_threat_break) then
     loop
       set u = FirstOfGroup(g)
       exitwhen u == null
-      // Only send standard (combat) units, skip peons/structures/heroes and units in healing/rescue groups
-      if IsStandardUnit(u) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) and DistanceBetweenPoints(GetUnitLoc(u), captain_home) >= 650 then
+      // Keep counting retreat-owned travellers; only capture new standard combat units.
+      if (IsUnitInGroup(u, in_retreat_group) or IsStandardUnit(u)) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) and DistanceBetweenPoints(GetUnitLoc(u), captain_home) >= 650 then
         if GetUnitCurrentOrder(u) != OrderId("harvest") then
           if not IsUnitInGroup(u, retreat_reset_pending) then
             if not IsUnitInGroup(u, in_retreat_group) then

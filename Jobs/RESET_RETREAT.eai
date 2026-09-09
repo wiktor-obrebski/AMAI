@@ -1,0 +1,32 @@
+#IFDEF GLOBAL
+#ELSE
+function ResetRetreatJob takes unit u returns nothing
+  // Only SEND_HOME schedules this after arrival and the normal recovery delay.
+  if not IsUnitInGroup(u, retreat_reset_pending) then
+    return
+  endif
+  if UnitAlive(u) and IsRetreatTeleporting(u) then
+    call TQAddUnitJob(1, RESET_RETREAT, 0, u)
+    return
+  endif
+  // If the strategic home moved, recovery must follow it instead of parking forever.
+  if UnitAlive(u) and DistanceBetweenPoints_dk(GetUnitLoc(u), captain_home) >= 650 then
+    call GroupRemoveUnit(retreat_reset_pending, u)
+    call GroupAddUnit(in_retreat_group, u)
+    call TQAddUnitJob(0, SEND_HOME, 1, u)
+    return
+  endif
+  if UnitAlive(u) and isfleeing then
+    if RetreatRecovery(u) then
+      // Let regeneration finish before trying another consumable.
+      call TQAddUnitJob(15, RESET_RETREAT, 0, u)
+      return
+    endif
+    call TQAddUnitJob(5, RESET_RETREAT, 0, u)
+    return
+  endif
+  call TraceAll("DBG RETREAT RESET RELEASE: id=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " alive=" + B2S(UnitAlive(u)) + " fleeing=" + B2S(isfleeing))
+  call GroupRemoveUnit(retreat_reset_pending, u)
+  call ResetGuardPositionJob(u)
+endfunction
+#ENDIF
