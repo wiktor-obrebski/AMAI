@@ -8090,6 +8090,82 @@ function GetItemInstantType takes integer id returns integer
 	return 0
 endfunction
 
+// Retreat rescue must not interrupt an item TP or Mass Teleport already in progress.
+function IsRetreatTeleporting takes unit u returns boolean
+  local integer order = GetUnitCurrentOrder(u)
+  if order == OrderId("massteleport") then
+    return true
+  endif
+  if tp_item != 0 and order >= 852008 and order <= 852013 then
+    return GetItemTypeId(UnitItemInSlot(u, order - 852008)) == old_id[tp_item]
+  endif
+  return false
+endfunction
+
+// Only self/area healing: never sacrifice another unit or move toward a shop.
+// The caller controls retry timing; continuous items are reserved for quiet recovery.
+function TryRetreatHealingItem takes unit u, boolean recovery returns boolean
+  local item it = null
+  if not UnitAlive(u) or not IsRetreatOrderLocked(u) or IsRetreatTeleporting(u) then
+    return false
+  endif
+  if GetUnitState(u, UNIT_STATE_LIFE) >= 0.80 * GetUnitState(u, UNIT_STATE_MAX_LIFE) then
+    return false
+  endif
+#INCLUDETABLE <$VER$\HealingItems.txt> #EFR #COND ("%3" eq "HEALINGITEM_HERO" or "%3" eq "HEALINGITEM_MASS" or "%3" eq "MERCHANTITEM_MASS" or "%3" eq "HEALINGITEM_SINGLE") and "%1" ne "RITUAL_DAGGER"
+  if ("%4" == "SUDDEN" or recovery) then
+    set it = GetItemOfTypeOnUnit(u%1, u)
+    if it != null then
+      if UnitUseItem(u, it) then
+        set it = null
+        return true
+      endif
+      if UnitUseItemTarget(u, it, u) then
+        set it = null
+        return true
+      endif
+    endif
+  endif
+#ENDINCLUDE
+  set it = null
+  return false
+endfunction
+
+// Healing stays at the recovery location. Order the nearby well, not the patient.
+function RetreatRecovery takes unit u returns boolean
+  local group g = null
+  local unit well = null
+  if not UnitAlive(u) or not IsUnitInGroup(u, retreat_reset_pending) or IsRetreatTeleporting(u) then
+    return false
+  endif
+  if GetUnitState(u, UNIT_STATE_LIFE) >= 0.80 * GetUnitState(u, UNIT_STATE_MAX_LIFE) then
+    return false
+  endif
+  if GetLocationNonCreepStrength(GetUnitX(u), GetUnitY(u), 800) > 0 then
+    return false
+  endif
+  if TryRetreatHealingItem(u, true) then
+    return true
+  endif
+  if race_has_moonwells then
+    set g = CreateGroup()
+    call GroupEnumUnitsInRange(g, GetUnitX(u), GetUnitY(u), 200, null)
+    loop
+      set well = FirstOfGroup(g)
+      exitwhen well == null
+      if GetOwningPlayer(well) == ai_player and UnitAlive(well) and GetUnitTypeId(well) == old_id[racial_farm] and GetUnitState(well, UNIT_STATE_MANA) >= 10 then
+        call IssueTargetOrder(well, "replenish", u)
+        exitwhen true
+      endif
+      call GroupRemoveUnit(g, well)
+    endloop
+    call DestroyGroup(g)
+  endif
+  set g = null
+  set well = null
+  return false
+endfunction
+
 //    Gets items that the hero can use to heal itself. Otherwise tries the racial items.
 function GetHeroHealingItem takes nothing returns integer
 	if false then

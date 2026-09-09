@@ -33,7 +33,10 @@ def load_jass_function(env, path, name):
     indent = 1
     for raw in source[1:-1]:
         line = raw.split('//')[0].strip()
-        if not line or re.match(r'call (TraceAll|DisplayToAllJobDebug|CreateDebugTag)\(', line):
+        if not line:
+            continue
+        if re.match(r'call (TraceAll|DisplayToAllJobDebug|CreateDebugTag)\(', line):
+            lines.append('    ' * indent + 'pass')
             continue
         line = re.sub(r'\btrue\b', 'True', line)
         line = re.sub(r'\bfalse\b', 'False', line)
@@ -64,6 +67,7 @@ def load_jass_function(env, path, name):
         lines.append('    ' * indent + line)
         if line.endswith(':'):
             indent += 1
+            lines.append('    ' * indent + 'pass')
     exec('\n'.join(lines), env)
 
 
@@ -75,6 +79,10 @@ class RetreatOwnershipTests(unittest.TestCase):
         self.dead = set()
         self.env = dict(
             isfleeing=False, attack_running=True,
+            IsRetreatTeleporting=lambda u: False, RetreatRecovery=lambda u: False,
+            captain_home=0, GetUnitLoc=lambda u: 0,
+            DistanceBetweenPoints_dk=lambda a, b: abs(a-b),
+            GroupAddUnit=lambda g, u: g.add(u), SEND_HOME='send_home',
             UNIT_TYPE_PEON='peon', UNIT_TYPE_STRUCTURE='structure',
             UNIT_STATE_LIFE='life', UNIT_STATE_MAX_LIFE='max_life',
             PLAYER_NEUTRAL_AGGRESSIVE=12, RESET_HEALTH='health', RESET_RETREAT='retreat',

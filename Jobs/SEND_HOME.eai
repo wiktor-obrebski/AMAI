@@ -73,6 +73,10 @@ function SendUnitHomeJob takes unit u, integer p returns nothing
     call TQAddUnitJob(2, RESET_GUARD_POSITION, p, u)
     return
   endif
+  if p >= 1 and IsRetreatTeleporting(u) then
+    call TQAddUnitJob(1, SEND_HOME, p, u)
+    return
+  endif
   if IsUnitType(u, UNIT_TYPE_HERO) then
     set racial_healing_item = GetHeroHealingItem()
     set racial_mana_item = GetHeroManaItem()
@@ -118,6 +122,7 @@ function SendUnitHomeJob takes unit u, integer p returns nothing
       call GroupRemoveUnit(debug_retreat_transit_group, u)
     endif
     call TraceAll("DBG RETREAT ARRIVED: id=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " order=" + Int2Str(GetUnitCurrentOrder(u)) + " army=" + Int2Str(GetArmyOfUnit(u)) + " captain=" + Int2Str(CaptainGroupSize()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)) + " attackRunning=" + B2S(attack_running) + " creepRunning=" + B2S(ordinary_creep_attack_running) + " creepId=" + Int2Str(creep_debug_id) + " hero=" + B2S(IsUnitType(u, UNIT_TYPE_HERO)))
+    call RetreatRecovery(u)
     call TQAddUnitJob(15, RESET_RETREAT, 0, u)
     return
   endif
