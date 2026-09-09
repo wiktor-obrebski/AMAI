@@ -25,6 +25,9 @@ unit blocked_unit = null
 // ##################################################################
 
 function TryAttackTree takes unit u, integer id, location l returns boolean
+    if IsRetreatOrderLocked(u) then
+        return false
+    endif
     if id == 'ebal' or id == 'hmtm' or id == 'ocat' or id == 'umtw' or id == 'ncat' then // Attack ground units
         call RemoveGuardPosition(u)
         call IssuePointOrderLoc(u, "attackground", l)

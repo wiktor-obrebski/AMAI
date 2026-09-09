@@ -85,13 +85,23 @@ local integer detectedenemies = GetLocationNonCreepStrength(GetUnitX(shop_sent),
  
    //call CreateDebugTag("In BUT ITEM JOB, 10, shop_sent, 3.00, 1.50) 
 
+  if IsRetreatOrderLocked(shop_sent) then
+    call GroupRemoveUnit(unit_buying_item, shop_sent)
+    set shop_sent = null
+    set shop_ordered = false
+    set shop_buy_time_large = -1
+    set shop_buy_time_small = -1
+    set retreat_home = false
+    return
+  endif
+
 // Town threatened so dont get item
   set dist = DistanceBetweenUnits(shop_sent, shop_unit)
   if (GetUnitTypeId(shop_unit) == old_id[racial_shop] and dist < 3000) or dist < 1500 then
   else
     if town_threatened or attack_running then
 		call CreateDebugTag("BUY_ITEM:in attack so dont get item", 10, shop_sent, 3.00, 1.50) 
-    	call RecycleGuardPosition(shop_sent)
+      call RecycleGuardPositionAM(shop_sent)
 		call GroupRemoveUnit(unit_buying_item, shop_sent)
 		call AddAssault(1, GetUnitTypeId(shop_sent))
     	set shop_sent = null
@@ -113,7 +123,7 @@ local integer detectedenemies = GetLocationNonCreepStrength(GetUnitX(shop_sent),
 		call TQAddJob(5, BUY_ITEM, id)
 	else
 		call GroupRemoveUnit(unit_buying_item, shop_sent)
-		call RecycleGuardPosition(shop_sent)
+		call RecycleGuardPositionAM(shop_sent)
 		call CreateDebugTag("BUY_ITEM: Retreated", 10, shop_sent, 3.00, 1.50)
 	    set shop_sent = null
 		set retreat_home = false
@@ -130,7 +140,7 @@ local integer detectedenemies = GetLocationNonCreepStrength(GetUnitX(shop_sent),
   if (shop_buy_time_large >= 0 and shop_buy_time_large + buy_timeout_large < current_time) or (shop_buy_time_small >= 0 and shop_buy_time_small + buy_timeout_small < current_time) then
     set available_time[id] = ai_time + regenerate_time[id] / 2
 	call CreateDebugTag("Buy item timeout reached", 10, shop_sent, 3.00, 1.50) 	
-    call RecycleGuardPosition(shop_sent)
+    call RecycleGuardPositionAM(shop_sent)
 	call GroupRemoveUnit(unit_buying_item, shop_sent)
     set shop_sent = null
     set shop_ordered = false
@@ -143,7 +153,7 @@ local integer detectedenemies = GetLocationNonCreepStrength(GetUnitX(shop_sent),
 
   
   if GetItemNumber(id) >= shop_wanted or shop_unit == null or (not UnitAlive(shop_unit)) or (shop_sent != null and GetSlotsFreeOnUnit(shop_sent) <= 0 and not healing) then
-    call RecycleGuardPosition(shop_sent)
+    call RecycleGuardPositionAM(shop_sent)
 	call GroupRemoveUnit(unit_buying_item, shop_sent)
 	call CreateDebugTag("BUT_ITEM: Items have been brought", 10, shop_sent, 3.00, 1.50) 
 	call AddAssault(1, GetUnitTypeId(shop_sent))

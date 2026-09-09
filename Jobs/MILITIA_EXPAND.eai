@@ -171,7 +171,7 @@ local boolean buildend = false
 				set gold_buffer = 0
 				set wood_buffer = 0
 				call Trace("Militia Ended")
-				call RecycleGuardPosition(militia_builder)
+				call RecycleGuardPositionAM(militia_builder)
 				set buildend = true
 			else
 				if militia_loc == null then
@@ -180,7 +180,7 @@ local boolean buildend = false
 				if GetGold() >= GetUnitGoldCost2(racial_hall[1]) and GetWood() >= GetUnitWoodCost2(racial_hall[1]) then
 					//call IssueTargetOrder(militia_fastb1, "stop", current_expansion)
 					//call IssueTargetOrder(militia_fastb2, "stop", current_expansion)
-					call RecycleGuardPosition(militia_builder)  // has to be here or peasant comes off construction
+					call RecycleGuardPositionAM(militia_builder)  // has to be here or peasant comes off construction
 					set buildend = BuildMilitiaExpansion(militia_builder, old_id[racial_expansion])
 					//set militia = false
 					//set militia_state = 0

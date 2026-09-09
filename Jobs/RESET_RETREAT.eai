@@ -1,0 +1,16 @@
+#IFDEF GLOBAL
+#ELSE
+function ResetRetreatJob takes unit u returns nothing
+  // Only SEND_HOME schedules this after arrival and the normal recovery delay.
+  if not IsUnitInGroup(u, retreat_reset_pending) then
+    return
+  endif
+  if UnitAlive(u) and isfleeing then
+    call TQAddUnitJob(5, RESET_RETREAT, 0, u)
+    return
+  endif
+  call TraceAll("DBG RETREAT RESET RELEASE: id=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " alive=" + B2S(UnitAlive(u)) + " fleeing=" + B2S(isfleeing))
+  call GroupRemoveUnit(retreat_reset_pending, u)
+  call ResetGuardPositionJob(u)
+endfunction
+#ENDIF
