@@ -107,6 +107,18 @@ class HeroTrackingTests(unittest.TestCase):
                 self.assertNotRegex(text,r'\b(?:Issue\w+|UnitUseItem\w*|CaptainGoHome|CaptainAttack|RemoveGuardPosition|RecycleGuardPosition)\(')
             self.assertNotRegex(text,r'\b(?:GetOwnStrength|GetOwnAttackStrength|GetRandomInt|GetRandomReal|GetTargetStrength|Select\w+)\(')
 
+    def test_ai_diagnostic_variables_do_not_shadow_declared_globals(self):
+        common = (ROOT / 'common.eai').read_text()
+        globals_text = common.split('globals', 1)[1].split('endglobals', 1)[0]
+        globals_ = set(re.findall(r'^\s*(?:constant\s+)?(?:integer|real|boolean|string|unit|group|location|player|timer|trigger|gamecache|hashtable|widget|item|code|effect|ability|texttag)\s+(?:array\s+)?(\w+)(?=\s|$)', globals_text, re.M))
+        self.assertIn('hero', globals_)
+        for file in ['HeroOrders.eai', 'HeroSnapshots.eai']:
+            source = (ROOT / 'Diagnostics' / file).read_text()
+            for name, args, body in re.findall(r'function (\w+) takes (.*?) returns \w+\n(.*?)endfunction', source, re.S):
+                declared = set(re.findall(r'local \w+ (\w+)', body))
+                declared.update(arg.split()[-1] for arg in args.split(', ') if arg != 'nothing')
+                self.assertFalse(declared & globals_, (file, name, declared & globals_))
+
     def test_raw_order_writer_coverage(self):
         names=re.findall(r'function DebugHero((?:Issue\w+|UnitUseItem\w*|RecycleGuardPosition|RemoveGuardPosition|CaptainGoHome|CaptainAttack|SetCaptainHome|AddAssault|InitAssault)) takes', (ROOT/ORDERS).read_text())
         pattern=r'\b(?:'+'|'.join(names)+r')\('

@@ -1,5 +1,5 @@
 // Read-only physical support sample. Never calls aggregate strength/selection helpers.
-function DebugHeroSnapshot takes unit hero returns nothing
+function DebugHeroSnapshot takes unit trackedHero returns nothing
   local group nearby = CreateGroup()
   local unit u = null
   local real own = 0
@@ -13,12 +13,12 @@ function DebugHeroSnapshot takes unit hero returns nothing
   local real dx = 0
   local real dy = 0
   local real mainDistance = -1
-  call GroupEnumUnitsInRange(nearby, GetUnitX(hero), GetUnitY(hero), 900, null)
+  call GroupEnumUnitsInRange(nearby, GetUnitX(trackedHero), GetUnitY(trackedHero), 900, null)
   loop
     set u = FirstOfGroup(nearby)
     exitwhen u == null
     // Exclude the sampled hero: ownCount=0 means no supporting own combat units.
-    if u != hero and UnitAlive(u) and not IsUnitHidden(u) and not IsUnitLoaded(u) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) and not IsUnitType(u, UNIT_TYPE_PEON) and GetUnitState(u, UNIT_STATE_MAX_LIFE) > 0 then
+    if u != trackedHero and UnitAlive(u) and not IsUnitHidden(u) and not IsUnitLoaded(u) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) and not IsUnitType(u, UNIT_TYPE_PEON) and GetUnitState(u, UNIT_STATE_MAX_LIFE) > 0 then
       if GetOwningPlayer(u) == ai_player then
         set strength = GetUnitStrength(u)
         set own = own + strength
@@ -40,17 +40,17 @@ function DebugHeroSnapshot takes unit hero returns nothing
   set nearby = null
   set u = null
   if main_army >= 0 and army_loc[main_army] != null then
-    set dx = GetUnitX(hero) - GetLocationX(army_loc[main_army])
-    set dy = GetUnitY(hero) - GetLocationY(army_loc[main_army])
+    set dx = GetUnitX(trackedHero) - GetLocationX(army_loc[main_army])
+    set dy = GetUnitY(trackedHero) - GetLocationY(army_loc[main_army])
     set mainDistance = SquareRoot(dx * dx + dy * dy)
   endif
-  call DebugHeroLog("HERO SNAPSHOT:" + DebugHeroState(hero))
-  call DebugHeroLog("HERO SUPPORT: hero=" + I2S(GetHandleId(hero)) + " alive=" + B2S(UnitAlive(hero)) + " illusion=" + B2S(IsUnitIllusion(hero)) + " loaded=" + B2S(IsUnitLoaded(hero)) + " radius=900 ownCount=" + I2S(ownCount) + " own=" + I2S(R2I(own)) + " readyCount=" + I2S(readyCount) + " ready=" + I2S(R2I(ready)) + " ally=" + I2S(R2I(allied)) + " visibleEnemyCount=" + I2S(enemyCount) + " visibleEnemy=" + I2S(R2I(enemy)) + " army=" + I2S(GetArmyOfUnit(hero)) + " mainDistance=" + I2S(R2I(mainDistance)) + " captain=" + I2S(CaptainGroupSize()) + " attackCombat=" + B2S(CaptainInCombat(true)) + " defenseCombat=" + B2S(CaptainInCombat(false)) + " townThreat=" + B2S(town_threatened) + " hardThreat=" + B2S(TownThreatened()))
+  call DebugHeroLog("HERO SNAPSHOT:" + DebugHeroState(trackedHero))
+  call DebugHeroLog("HERO SUPPORT: hero=" + I2S(GetHandleId(trackedHero)) + " alive=" + B2S(UnitAlive(trackedHero)) + " illusion=" + B2S(IsUnitIllusion(trackedHero)) + " loaded=" + B2S(IsUnitLoaded(trackedHero)) + " radius=900 ownCount=" + I2S(ownCount) + " own=" + I2S(R2I(own)) + " readyCount=" + I2S(readyCount) + " ready=" + I2S(R2I(ready)) + " ally=" + I2S(R2I(allied)) + " visibleEnemyCount=" + I2S(enemyCount) + " visibleEnemy=" + I2S(R2I(enemy)) + " army=" + I2S(GetArmyOfUnit(trackedHero)) + " mainDistance=" + I2S(R2I(mainDistance)) + " captain=" + I2S(CaptainGroupSize()) + " attackCombat=" + B2S(CaptainInCombat(true)) + " defenseCombat=" + B2S(CaptainInCombat(false)) + " townThreat=" + B2S(town_threatened) + " hardThreat=" + B2S(TownThreatened()))
 endfunction
 
 function DebugHeroTrackingThread takes nothing returns nothing
   local group heroes = CreateGroup()
-  local unit hero = null
+  local unit trackedHero = null
   local real lastSave = 0
   call Sleep(2)
   call DebugHeroLog("HERO TRACKING START: version=1 interval=2 supportRadius=900 clock=tq_timer")
@@ -58,12 +58,12 @@ function DebugHeroTrackingThread takes nothing returns nothing
     exitwhen not debug_hero_tracking
     call GroupEnumUnitsOfPlayer(heroes, ai_player, null)
     loop
-      set hero = FirstOfGroup(heroes)
-      exitwhen hero == null
-      if IsUnitType(hero, UNIT_TYPE_HERO) then
-        call DebugHeroSnapshot(hero)
+      set trackedHero = FirstOfGroup(heroes)
+      exitwhen trackedHero == null
+      if IsUnitType(trackedHero, UNIT_TYPE_HERO) then
+        call DebugHeroSnapshot(trackedHero)
       endif
-      call GroupRemoveUnit(heroes, hero)
+      call GroupRemoveUnit(heroes, trackedHero)
     endloop
     if debug_hero_dirty and TimerGetElapsed(tq_timer) - lastSave >= 5 then
       call SaveGameCache(debug_hero_cache)
@@ -78,5 +78,5 @@ function DebugHeroTrackingThread takes nothing returns nothing
   endif
   call DestroyGroup(heroes)
   set heroes = null
-  set hero = null
+  set trackedHero = null
 endfunction
