@@ -33,9 +33,9 @@ function RallypointJob takes nothing returns nothing
     set u = FirstOfGroup(g)
     exitwhen u == null
     if rally_point != null and DistanceBetweenPoints_dk(GetUnitLoc(u), home_location) <= expansion_taken_radius then
-      call IssuePointOrderLoc(u, "setrally", rally_point)
+      call DebugHeroIssuePointOrderLoc(u, "setrally", rally_point, "Jobs/RALLY_POINT.eai:RallypointJob:36")
     else
-      call IssuePointOrderLoc(u, "setrally", home_location)
+      call DebugHeroIssuePointOrderLoc(u, "setrally", home_location, "Jobs/RALLY_POINT.eai:RallypointJob:38")
     endif
     call GroupRemoveUnit(g,u)
   endloop

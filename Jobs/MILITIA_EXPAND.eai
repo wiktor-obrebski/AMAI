@@ -36,7 +36,7 @@ function BuildMilitiaExpansion takes unit peon , integer unitid returns boolean
     return false
   endif
 
-  return IssuePointOrderByIdLoc(peon, unitid, militia_loc)
+  return DebugHeroIssuePointOrderByIdLoc(peon, unitid, militia_loc, "Jobs/MILITIA_EXPAND.eai:BuildMilitiaExpansion:39")
 
 endfunction
 
@@ -145,7 +145,7 @@ local boolean buildend = false
     //set militia_fastb2 = FirstOfGroup(g)
     //call GroupRemoveUnit(g, militia_fastb2)
     //set militia_fastb3 = FirstOfGroup(g)
-    call RemoveGuardPosition(militia_builder)
+    call DebugHeroRemoveGuardPosition(militia_builder, "Jobs/MILITIA_EXPAND.eai:TryMilitiaExpansionFoot:148")
     call DestroyGroup(g)
     set g = null
     if militia_builder != null then
@@ -190,13 +190,13 @@ local boolean buildend = false
 					set gold_buffer = GetUnitGoldCost2(racial_expansion)
 					set wood_buffer = GetUnitWoodCost2(racial_expansion)
 					call Trace("Moving near")
-					call RemoveGuardPosition(militia_builder)
+					call DebugHeroRemoveGuardPosition(militia_builder, "Jobs/MILITIA_EXPAND.eai:TryMilitiaExpansionFoot:193")
 					if militia_loc == null then
-						call IssueTargetOrder(militia_builder, "move", current_expansion)
+						call DebugHeroIssueTargetOrder(militia_builder, "move", current_expansion, "Jobs/MILITIA_EXPAND.eai:TryMilitiaExpansionFoot:195")
 						//call IssueTargetOrder(militia_fastb1, "move", current_expansion)
 						//call IssueTargetOrder(militia_fastb2, "move", current_expansion)
 					else
-						call IssuePointOrderLoc(militia_builder, "move", militia_loc)
+						call DebugHeroIssuePointOrderLoc(militia_builder, "move", militia_loc, "Jobs/MILITIA_EXPAND.eai:TryMilitiaExpansionFoot:199")
 					endif
 				endif
       endif

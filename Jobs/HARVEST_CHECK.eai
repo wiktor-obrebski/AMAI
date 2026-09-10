@@ -43,12 +43,12 @@ function CountPeonsInMine takes unit mine, integer limit returns integer
       set i = i + 1
       if i > limit and not race_uses_mine_expansion then
          if GetUnitCurrentOrder(u) != OrderId("resumeharvesting") then
-          call IssueImmediateOrder(u, "stop") // human, orc can have too many peons that shouldn't be harvesting
+          call DebugHeroIssueImmediateOrder(u, "stop", "Jobs/HARVEST_CHECK.eai:CountPeonsInMine:46") // human, orc can have too many peons that shouldn't be harvesting
          endif
          call GroupRemoveUnit(harvestgrp, u)
       else 
          if not race_uses_mine_expansion and GetUnitCurrentOrder(u) != OrderId("resumeharvesting") then
-          call IssueTargetOrder(u, "harvest", mine) // order in case its fake wood harvesters
+          call DebugHeroIssueTargetOrder(u, "harvest", mine, "Jobs/HARVEST_CHECK.eai:CountPeonsInMine:51") // order in case its fake wood harvesters
          endif
          call GroupAddUnit(harvestgrp, u)
       endif
@@ -95,7 +95,7 @@ function PeonMineCheck takes unit mine returns boolean
     if FoodSpace() <= 0 and i >= 3 then  // no foodspace , no peon(at least keep 2 harvest mine) , need one harvest mine peon build Farms
       if peon == peond and peon <= 4 then
         set delaywisps = 2
-        call IssueTargetOrder(mine, "unload", savewisp)
+        call DebugHeroIssueTargetOrder(mine, "unload", savewisp, "Jobs/HARVEST_CHECK.eai:PeonMineCheck:98")
         call GroupRemoveUnit(harvestgrp, savewisp)
       endif
     elseif peond < 7 and not hero_built[1] then
@@ -111,7 +111,7 @@ function PeonMineCheck takes unit mine returns boolean
       loop  //use accurate quantity control , prevent any wips harvestmine , but mine no vacancies
         set u = FirstOfGroup(tempg)
         exitwhen u == null or i >= delaywisps
-        call IssueTargetOrder(u, "harvest", mine)
+        call DebugHeroIssueTargetOrder(u, "harvest", mine, "Jobs/HARVEST_CHECK.eai:PeonMineCheck:114")
         call GroupAddUnit(harvestgrp, u)
         set i = i + 1
         call GroupRemoveUnit(tempg, u)
@@ -132,7 +132,7 @@ function PeonMineCheck takes unit mine returns boolean
         set u = FirstOfGroup(g)
         exitwhen u == null or i >= delaywisps
         if GetUnitCurrentOrder(u) != OrderId("resumeharvesting") then // resumeharvest is peons returning home so don't interrupt the return of goods
-          call IssueTargetOrder(u, "harvest", mine)
+          call DebugHeroIssueTargetOrder(u, "harvest", mine, "Jobs/HARVEST_CHECK.eai:PeonMineCheck:135")
         endif
         call GroupAddUnit(harvestgrp, u)
         set i = i + 1

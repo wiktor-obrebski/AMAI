@@ -48,7 +48,7 @@ function BuyNeutralHero takes integer id returns nothing
         set tavern = null
         return
       else
-        call RemoveGuardPosition(buying_unit)
+        call DebugHeroRemoveGuardPosition(buying_unit, "Jobs/BUY_NEUTRAL_HERO.eai:BuyNeutralHero:51")
         call Trace("unit for neutral hero obtained")
       endif
     endif
@@ -62,12 +62,12 @@ function BuyNeutralHero takes integer id returns nothing
       set distance = DistanceBetweenUnits(buying_unit, tavern)
       if distance >= buy_distance then
         call CreateDebugTag("Move to Tavern", 10, buying_unit, 3.00, 1.50)
-        call IssuePointOrder(buying_unit, "move", GetUnitX(tavern), GetUnitY(tavern))
+        call DebugHeroIssuePointOrder(buying_unit, "move", GetUnitX(tavern), GetUnitY(tavern), "Jobs/BUY_NEUTRAL_HERO.eai:BuyNeutralHero:65")
         set time_next_try = 4
       else
         call CreateDebugTag("buy tavern hero", 10, buying_unit, 3.00, 1.50) 
         if GetUnitCurrentOrder(buying_unit) == OrderId("move") then
-          call IssueImmediateOrder(buying_unit, "holdposition")
+          call DebugHeroIssueImmediateOrder(buying_unit, "holdposition", "Jobs/BUY_NEUTRAL_HERO.eai:BuyNeutralHero:70")
         endif
         call IssueNeutralImmediateOrderById(ai_player, tavern, old_id[id])
         set time_next_try = 0.5

@@ -43,7 +43,7 @@ function EnsureSetCaptainHome takes location target returns nothing
     return
   endif
   if captain_home == null or GetLocationX(captain_home) != GetLocationX(target) or GetLocationY(captain_home) != GetLocationY(target) then
-    call SetCaptainHome(BOTH_CAPTAINS, GetLocationX(target), GetLocationY(target))
+    call DebugHeroSetCaptainHome(BOTH_CAPTAINS, GetLocationX(target), GetLocationY(target), "Jobs/ARMY_TRACK.eai:EnsureSetCaptainHome:46")
     set captain_home_revision = captain_home_revision + 1
   endif
 endfunction

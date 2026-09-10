@@ -69,6 +69,15 @@ def load_jass_function(env, path, name):
             indent += 1
             lines.append('    ' * indent + 'pass')
     exec('\n'.join(lines), env)
+    # Execute actual diagnostic passthrough wrappers in existing behaviour tests.
+    # Their logging is disabled here; dedicated tests also exercise enabled logging.
+    if path != 'Diagnostics/HeroOrders.eai':
+        env.setdefault('debug_hero_tracking', False)
+        for wrapper in set(re.findall(r'\b(DebugHero\w+)\(', '\n'.join(source))):
+            if wrapper not in env:
+                load_jass_function(env, 'Diagnostics/HeroOrders.eai', wrapper)
+        if 'DebugHeroOrderAfter' not in env:
+            load_jass_function(env, 'Diagnostics/HeroOrders.eai', 'DebugHeroOrderAfter')
 
 
 class RetreatOwnershipTests(unittest.TestCase):
@@ -189,10 +198,12 @@ class RetreatOwnershipTests(unittest.TestCase):
         # Blizzard map scripts run in another VM; this audits the AMAI sources.
         for path in [ROOT / 'common.eai', *(ROOT / 'Jobs').glob('*.eai')]:
             active = '\n'.join(line.split('//')[0] for line in path.read_text().splitlines())
-            count = len(re.findall(r'\bcall RecycleGuardPosition\(', active))
+            count = len(re.findall(r'\bcall (?:DebugHero)?RecycleGuardPosition\(', active))
             self.assertEqual(count, 1 if path.name == 'common.eai' else 0, path)
         wrapper = function_source('common.eai', 'RecycleGuardPositionAM')
-        self.assertIn('call RecycleGuardPosition(u)', wrapper)
+        self.assertIn('call DebugHeroRecycleGuardPosition(u,', wrapper)
+        native_wrapper = function_source('Diagnostics/HeroOrders.eai', 'DebugHeroRecycleGuardPosition')
+        self.assertEqual(native_wrapper.count('call RecycleGuardPosition(u)'), 1)
 
 
 if __name__ == '__main__':

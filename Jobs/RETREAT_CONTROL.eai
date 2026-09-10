@@ -297,7 +297,7 @@ if isfleeing or (town_threatened and town_threat_break) then
         if GetUnitCurrentOrder(u) != OrderId("harvest") then
           if not IsUnitInGroup(u, retreat_reset_pending) then
             if not IsUnitInGroup(u, in_retreat_group) then
-              call RemoveGuardPosition(u)
+              call DebugHeroRemoveGuardPosition(u, "Jobs/RETREAT_CONTROL.eai:RetreatControlJob:300")
               call GroupAddUnit(in_retreat_group, u)
               call TQAddUnitJob(0, SEND_HOME, 1, u)
             endif
@@ -438,7 +438,7 @@ if attack_running then
       call DebugStartRetreatTransitTracking()
     endif
 
-    call CaptainGoHome()
+    call DebugHeroCaptainGoHome("Jobs/RETREAT_CONTROL.eai:RetreatControlJob:441")
     if not isfleeing then
       call TraceAll(        "DBG FLEE WRITE:"        + " run=" + Int2Str(debug_run_id)        + " reason=FORCED"        + " old=false new=true"        + " epoch=" + Int2Str(debug_retreat_epoch)        + " retreatCtl=" + B2S(retreat_controlled)        + " captainRetreating=" + B2S(CaptainRetreating()))
       set retreat_end_switch = false

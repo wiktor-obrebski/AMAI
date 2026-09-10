@@ -1,0 +1,6 @@
+    boolean amai_hero_event_tracking = true
+    gamecache amai_hero_event_cache = null
+    timer amai_hero_event_clock = null
+    trigger amai_hero_event_trigger = null
+    integer array amai_hero_event_index
+    boolean amai_hero_event_dirty = false

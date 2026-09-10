@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Diagnostics
+- Trace hero order sources/results and captain/guard writes, with two-second position, retreat-state and nearby-support snapshots.
+- Add a passive map-side hero order observer using a separate cache; document full-map installation, clock alignment, unknown-source handling and runtime limitations in `Diagnostics/README.md`.
+
 ### Changed
 - Additional peons needed for an expansion will start to be trained early.
 - Added boots of speed to all strategies.

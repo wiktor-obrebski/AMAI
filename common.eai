@@ -9,6 +9,7 @@
 #INCLUDE <Natives.j>
 
 globals
+#INCLUDE <Diagnostics\HeroTraceGlobals.eai>
 
    //============================================================================
    // Standard Constants and Variables
@@ -1732,6 +1733,8 @@ function TraceAll takes string s returns nothing
   call TraceLog("tms=" + Int2Str(R2I(TimerGetElapsed(tq_timer) * 1000)) + " " + s)
   // endif
 endfunction
+
+#INCLUDE <Diagnostics\HeroOrders.eai>
 
 //============================================================================
 function TraceI takes string s, integer val returns nothing
@@ -4165,7 +4168,7 @@ endfunction
 // Delayed cleanup from another subsystem must not restore native control.
 function RecycleGuardPositionAM takes unit u returns nothing
   if not IsRetreatOrderLocked(u) then
-    call RecycleGuardPosition(u)
+    call DebugHeroRecycleGuardPosition(u, "common.eai:RecycleGuardPositionAM:4168")
   endif
 endfunction
 
@@ -4340,7 +4343,7 @@ function GroupAddTypeAndRemoveGuard takes group g, integer id, player p returns 
     set u = FirstOfGroup(ag)
     exitwhen u == null
     if GetUnitTypeId(u) == id then
-      call RemoveGuardPosition(u)
+      call DebugHeroRemoveGuardPosition(u, "common.eai:GroupAddTypeAndRemoveGuard:4343")
       call CreateDebugTag("Remove Guard Position Group Add Type", 10, u, 3.00, 1.50)
       call GroupAddUnit(g,u)
     endif
@@ -4360,7 +4363,7 @@ function GroupRemoveGuardPositionInstant takes group g returns nothing
   loop
     set u = FirstOfGroup(ug)
     exitwhen u == null
-    call RemoveGuardPosition(u)
+    call DebugHeroRemoveGuardPosition(u, "common.eai:GroupRemoveGuardPositionInstant:4363")
     call CreateDebugTag("Remove Guard Position Instant", 10, u, 3.00, 1.50)
     call GroupRemoveUnit(ug,u)
   endloop
@@ -4389,7 +4392,7 @@ function GroupRecycleHarrassPositionInstant takes group g returns nothing
     exitwhen u == null
     if not IsRetreatOrderLocked(u) then
       call RecycleGuardPositionAM(u)
-      call AddAssault(1, GetUnitTypeId(u))
+      call DebugHeroAddAssault(1, GetUnitTypeId(u), "common.eai:GroupRecycleHarrassPositionInstant:4392")
     endif
     call GroupRemoveUnit(unit_harassing, u)
     call GroupRemoveUnit(g,u)
@@ -4627,7 +4630,7 @@ function CreatePathingUnitFull takes unit u, player p, integer id, real x, real 
   if p != ai_player then
     call SetUnitOwner(u, ai_player, true)  // player overriden as neutral players cannot be used
   endif
-  call RemoveGuardPosition(u)
+  call DebugHeroRemoveGuardPosition(u, "common.eai:CreatePathingUnitFull:4630")
   return u
 endfunction
 
@@ -4670,7 +4673,7 @@ function CanPathToLoc takes location locA, location target, pathingtype path ret
       return -1.0
     endif
 
-    call IssuePointOrder(u, "move", GetLocationX(target), GetLocationY(target))
+    call DebugHeroIssuePointOrder(u, "move", GetLocationX(target), GetLocationY(target), "common.eai:CanPathToLoc:4673")
 //	call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Path Unit Created")
 
     set checktime =  GetTimeToReachLoc(u, target)
@@ -4775,7 +4778,7 @@ function CalcNearestNeutrals takes nothing returns nothing
           set nearest_neutral[neutral_i] = null
           set pather[i] = CreatePathingUnit(pather[i])
           set checks[i] = 0
-          call IssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u))
+          call DebugHeroIssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u), "common.eai:CalcNearestNeutrals:4778")
           if (ModuloInteger(i,10) == 0) then
             call StaggerSleep(0.1 * sleep_multiplier, GetRandomReal(0.2, 0.4) * sleep_multiplier)
           endif
@@ -4831,14 +4834,14 @@ function CalcNearestNeutrals takes nothing returns nothing
                 set pather[i] = null
               else
                 call CreateDebugTag("Invisible Path unit has stopped", 10, pather[i], 10.00, 8.00)
-                call IssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u))
+                call DebugHeroIssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u), "common.eai:CalcNearestNeutrals:4834")
               endif
             else
               //call CreateDebugTag("Invisible Path Unit Here and Moving", 10, pather[i], 10.00, 8.00)
               if (lx[i] != 0 and ly[i] != 0) then
                 if GetUnitX(pather[i]) == lx[i] and GetUnitY(pather[i]) == ly[i] then
                   // Actually stuck
-                  call IssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u))
+                  call DebugHeroIssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u), "common.eai:CalcNearestNeutrals:4841")
                 endif
               endif
               set lx[i] = GetUnitX(pather[i])
@@ -4901,7 +4904,7 @@ function GetNearestNeutral takes unit ru, integer id returns unit
     if GetUnitTypeId(u) == id and UnitAlive(u) and not IsUnitType(u, UNIT_TYPE_SUMMONED) then  //prevent neutral_id[NEUTRAL_HEAL_WARD]
       set pather[i] = CreatePathingUnit(pather[i])
       set checks[i] = 0
-      call IssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u))
+      call DebugHeroIssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u), "common.eai:GetNearestNeutral:4904")
       if (ModuloInteger(i,10) == 0) then
         call StaggerSleep(0.2 * sleep_multiplier, 0.3 * sleep_multiplier)
       endif
@@ -4949,7 +4952,7 @@ function GetNearestNeutral takes unit ru, integer id returns unit
             call RemoveUnit(pather[i])
             set pather[i] = null
           else
-            call IssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u))
+            call DebugHeroIssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u), "common.eai:GetNearestNeutral:4952")
           endif
         //else
           //set checks = 0	// means unit is moving and not standing still
@@ -6169,7 +6172,7 @@ function GetLocationInDistanceFromLoc takes location loc, real dist, boolean inj
     return null
   endif
   set u = CreatePathingUnitFull(u,Player(PLAYER_NEUTRAL_PASSIVE), groundid, GetLocationX(loc),GetLocationY(loc))
-  call IssuePointOrder(u, "move", GetLocationX(home_location), GetLocationY(home_location))
+  call DebugHeroIssuePointOrder(u, "move", GetLocationX(home_location), GetLocationY(home_location), "common.eai:GetLocationInDistanceFromLoc:6172")
   //set checktime = GetTimeToReachLoc(u, home_location)
   loop
     exitwhen (exitloop == true)
@@ -6208,7 +6211,7 @@ function GetLocationInDistanceFromBaseToLoc takes location loc, real d returns l
 // call DisplayToAll("Checking")
 // call PingMinimap(GetLocationX(start_loc), GetLocationY(start_loc), 20)
   set u = CreatePathingUnit(u)
-  call IssuePointOrderLoc(u, "move", loc)
+  call DebugHeroIssuePointOrderLoc(u, "move", loc, "common.eai:GetLocationInDistanceFromBaseToLoc:6211")
   //set checktime = GetTimeToReachLoc(u, loc)
   loop
     set x = GetUnitX(u)
@@ -6267,7 +6270,7 @@ function GetLumberLocationAtBase takes nothing returns location
     set ground_id = old_id[racial_ghoul]
   endif
   set u = CreatePathingUnitFull(u, Player(PLAYER_NEUTRAL_PASSIVE), ground_id, GetLocationX(home_location), GetLocationY(home_location))
-  call IssueImmediateOrder(u, "autoharvestlumber")
+  call DebugHeroIssueImmediateOrder(u, "autoharvestlumber", "common.eai:GetLumberLocationAtBase:6270")
   call Sleep(5.00)
   set x = GetUnitX(u)
   set y = GetUnitY(u)
@@ -6294,7 +6297,7 @@ function BuildLumberMillAtBase takes nothing returns boolean
     set temp = null
     call RemoveUnit(u)
     set u = null
-    call IssuePointOrderByIdLoc(peon, old_id[racial_lumber], buildloc)
+    call DebugHeroIssuePointOrderByIdLoc(peon, old_id[racial_lumber], buildloc, "common.eai:BuildLumberMillAtBase:6297")
     set b = true
     call RemoveLocation(buildloc)
     set buildloc = null
@@ -6330,9 +6333,9 @@ function BuildBRAtCreep takes nothing returns boolean
     exitwhen u == null or i >= 7  //7 shoul have 2 creepcamp
     if GetCreepCampStrength(u) < 10 and GetUnitLevel(u) < 5 then
       set ua[i] = CreatePathingUnit(ua[i])
-      call IssuePointOrder(ua[i], "move", GetUnitX(u), GetUnitY(u))
+      call DebugHeroIssuePointOrder(ua[i], "move", GetUnitX(u), GetUnitY(u), "common.eai:BuildBRAtCreep:6333")
       set ub[i] = CreatePathingUnitFull(ub[i],ai_player,groundid,GetUnitX(u), GetUnitY(u))
-      call IssueTargetOrder(ub[i], "smart", ua[i])  //go in opposite directions , save time
+      call DebugHeroIssueTargetOrder(ub[i], "smart", ua[i], "common.eai:BuildBRAtCreep:6335")  //go in opposite directions , save time
       set uc[i] = u
       set i = i + 1
     endif
@@ -6404,12 +6407,12 @@ function BuildBRAtCreep takes nothing returns boolean
           return false
         endif
         if home_town >= 0 and town_mine[home_town] != null then
-          call IssueTargetOrder(town_mine[home_town], "unload", u)
+          call DebugHeroIssueTargetOrder(town_mine[home_town], "unload", u, "common.eai:BuildBRAtCreep:6407")
         endif
         call Sleep(0.01)
       endif
-      call RemoveGuardPosition(u)
-      call IssuePointOrderByIdLoc(u, old_id[racial_rushcreep], loc)
+      call DebugHeroRemoveGuardPosition(u, "common.eai:BuildBRAtCreep:6411")
+      call DebugHeroIssuePointOrderByIdLoc(u, old_id[racial_rushcreep], loc, "common.eai:BuildBRAtCreep:6412")
       set br_rush_built = true
       set success = true
       set u = null
@@ -6478,7 +6481,7 @@ if town_threatened or not hero_built[1] or (not race_manual_loading and not race
       set g = SelectByAlive(g, true)
       set u = FirstOfGroup(g)
       if u != null and (GetUnitCurrentOrder(u) != OrderId("entangle") or GetRandomInt(0,3) == 1) then  // random prevent tree stop
-        call IssueTargetOrder(u, "entangle", fixmine)  // first entangle , not build , this API only return false , cannot set b
+        call DebugHeroIssueTargetOrder(u, "entangle", fixmine, "common.eai:MultipleMinefix:6481")  // first entangle , not build , this API only return false , cannot set b
         set b = true
       endif
       set u = null
@@ -6491,7 +6494,7 @@ if town_threatened or not hero_built[1] or (not race_manual_loading and not race
         set expansion_peon = GetExpansionPeon()
       endif
       if expansion_peon != null and UnitAlive(expansion_peon) and DistanceBetweenPoints_kd(l, GetUnitLoc(fixmine)) <= race_max_expa_mine_distance and GetGold() > GetUnitGoldCost(old_id[racial_expansion]) and GetWood() > GetUnitGoldCost(old_id[racial_expansion]) then
-        call IssuePointOrderByIdLoc(expansion_peon, old_id[racial_expansion], l)  // this API only return false , cannot set b
+        call DebugHeroIssuePointOrderByIdLoc(expansion_peon, old_id[racial_expansion], l, "common.eai:MultipleMinefix:6494")  // this API only return false , cannot set b
         set b = true
       endif
       call RemoveLocation(l)
@@ -6502,7 +6505,7 @@ if town_threatened or not hero_built[1] or (not race_manual_loading and not race
       set expansion_peon = GetExpansionPeon()
     endif
     if expansion_peon != null and UnitAlive(expansion_peon) and GetGold() > GetUnitGoldCost(old_id[racial_expansion]) and GetWood() > GetUnitGoldCost(old_id[racial_expansion]) then
-      call IssueTargetOrderById(expansion_peon, old_id[racial_expansion], fixmine)  // this API only return false , cannot set b
+      call DebugHeroIssueTargetOrderById(expansion_peon, old_id[racial_expansion], fixmine, "common.eai:MultipleMinefix:6505")  // this API only return false , cannot set b
       set b = true
     endif
   elseif c < 2 then
@@ -6801,7 +6804,7 @@ function MakeExpansionList takes nothing returns nothing
     exitwhen u == null
     set pather[i] = CreatePathingUnit(pather[i])
     set checks[i] = 0
-    call IssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u))
+    call DebugHeroIssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u), "common.eai:MakeExpansionList:6804")
     call GroupRemoveUnit(tempg, u)
     if (ModuloInteger(i,10) == 0) then
       call Sleep(GetRandomReal(0.2, 0.4) * sleep_multiplier) // help spread start lag
@@ -6842,14 +6845,14 @@ function MakeExpansionList takes nothing returns nothing
             set patherdone[i] = true
             call AddWaterExpansion(u, DistanceBetweenPoints_kd(home_location, GetUnitLoc(u)))
           else
-            call IssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u)) // Try again?
+            call DebugHeroIssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u), "common.eai:MakeExpansionList:6845") // Try again?
           endif
         else
           //call CreateDebugTag("Invisible Path Unit Here", 10, pather[i], 5.00, 3.00)
           if (lx[i] != 0 and ly[i] != 0) then
             if GetUnitX(pather[i]) == lx[i] and GetUnitY(pather[i]) == ly[i] then
               // Actually stuck
-              call IssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u))
+              call DebugHeroIssuePointOrder(pather[i], "move", GetUnitX(u), GetUnitY(u), "common.eai:MakeExpansionList:6852")
             endif
           endif
           set lx[i] = GetUnitX(pather[i])
@@ -7610,7 +7613,7 @@ function ComputeFrontPoints takes nothing returns nothing
       if l != null then
         set u[n] = CreatePathingUnit(u[n])
          set enemyplayers[n] = IsPlayerEnemy(ai_player, p)
-        call IssuePointOrder(u[n], "move", GetLocationX(l), GetLocationY(l))
+        call DebugHeroIssuePointOrder(u[n], "move", GetLocationX(l), GetLocationY(l), "common.eai:ComputeFrontPoints:7613")
         call RemoveLocation(l)
         set n = n + 1
       endif
@@ -7936,11 +7939,11 @@ function HealUnit takes unit healer, unit to_heal, boolean hero_heal returns not
   if not IsRetreatOrderLocked(healer) and id != -1 and healer_type[id] != HEALER_TYPE_NO_TARGET then
     if healer_type[id] == HEALER_TYPE_WARD then
       if not ward_cast then
-        call IssuePointOrderById(healer, healer_spell[id], GetUnitX(healer), GetUnitY(healer))
+        call DebugHeroIssuePointOrderById(healer, healer_spell[id], GetUnitX(healer), GetUnitY(healer), "common.eai:HealUnit:7939")
       endif
     else
       if healer_type[id] != HEALER_TYPE_HERO or hero_heal then
-        call IssueTargetOrderById(healer, healer_spell[id], to_heal)
+        call DebugHeroIssueTargetOrderById(healer, healer_spell[id], to_heal, "common.eai:HealUnit:7943")
       endif
     endif
     call GroupRemoveUnit(unit_healing, healer)
@@ -8116,11 +8119,11 @@ function TryRetreatHealingItem takes unit u, boolean recovery returns boolean
   if ("%4" == "SUDDEN" or recovery) then
     set it = GetItemOfTypeOnUnit(u%1, u)
     if it != null then
-      if UnitUseItem(u, it) then
+      if DebugHeroUnitUseItem(u, it, "common.eai:TryRetreatHealingItem:8119") then
         set it = null
         return true
       endif
-      if UnitUseItemTarget(u, it, u) then
+      if DebugHeroUnitUseItemTarget(u, it, u, "common.eai:TryRetreatHealingItem:8123") then
         set it = null
         return true
       endif
@@ -8154,7 +8157,7 @@ function RetreatRecovery takes unit u returns boolean
       set well = FirstOfGroup(g)
       exitwhen well == null
       if GetOwningPlayer(well) == ai_player and UnitAlive(well) and GetUnitTypeId(well) == old_id[racial_farm] and GetUnitState(well, UNIT_STATE_MANA) >= 10 then
-        call IssueTargetOrder(well, "replenish", u)
+        call DebugHeroIssueTargetOrder(well, "replenish", u, "common.eai:RetreatRecovery:8157")
         exitwhen true
       endif
       call GroupRemoveUnit(g, well)
@@ -9381,6 +9384,8 @@ endfunction
 //============================================================================
 // AMAI Code
 //============================================================================
+#INCLUDE <Diagnostics\HeroSnapshots.eai>
+
 function InitAMAI takes nothing returns nothing
   if debugging > 0 and IsPlayerObserver(GetLocalPlayer()) then
     call SetPlayerAlliance(ai_player, GetLocalPlayer(), ALLIANCE_HELP_REQUEST,  true)
@@ -9485,6 +9490,9 @@ function AMAI takes code heroes, code peons, code attacks returns nothing
   call InitCheckHarvest() // Fix harvest logic for multiple mines and elf and undead unable to harvest
   // Job Thread
   call StartThread(function TQLoop)
+  if debug_hero_tracking then
+    call StartThread(function DebugHeroTrackingThread)
+  endif
   //call Trace("TQLoop")
   call StartThread(peons)
   //call Trace("peons")
@@ -11224,7 +11232,7 @@ function UpgradeBuilding takes integer qty, integer unitid, integer town, intege
       set u = FirstOfGroup(g)
       exitwhen u == null
       if GetOwningPlayer(u) == ai_player and GetUnitTypeId(u) == old_id[needed1[unitid]] and UnitAlive(u) then
-        if IssueImmediateOrderById(u, old_id[unitid]) then
+        if DebugHeroIssueImmediateOrderById(u, old_id[unitid], "common.eai:UpgradeBuilding:11227") then
           set num = num + 1
           if num >= qty then
             call DestroyGroup(g)
@@ -11244,7 +11252,7 @@ function UpgradeBuilding takes integer qty, integer unitid, integer town, intege
       set u = FirstOfGroup(g)
       exitwhen u == null
       if GetOwningPlayer(u) == ai_player and GetUnitTypeId(u) == old_id[needed1[unitid]] and UnitAlive(u) then
-        if IssueImmediateOrderById(u, old_id[unitid]) then
+        if DebugHeroIssueImmediateOrderById(u, old_id[unitid], "common.eai:UpgradeBuilding:11247") then
           set num = num + 1
           if num >= qty then
             call DestroyGroup(g)
@@ -11272,7 +11280,7 @@ function UpgradeBuilding takes integer qty, integer unitid, integer town, intege
     set u = FirstOfGroup(g)
     exitwhen u == null
     if GetUnitTypeId(u) == old_id[needed1[unitid]] and UnitAlive(u) then
-      if IssueImmediateOrderById(u, old_id[unitid]) then
+      if DebugHeroIssueImmediateOrderById(u, old_id[unitid], "common.eai:UpgradeBuilding:11275") then
         set num = num + 1
         if num >= qty then
           call DestroyGroup(g)
@@ -11329,7 +11337,7 @@ function BuildAtSpecialLoc takes integer unitid, integer town, integer bloc retu
     set peon = null
     return CANNOT_BUILD
   endif
-  call IssuePointOrderByIdLoc(peon, old_id[unitid], l) // Always returns false whether successful or not
+  call DebugHeroIssuePointOrderByIdLoc(peon, old_id[unitid], l, "common.eai:BuildAtSpecialLoc:11332") // Always returns false whether successful or not
   call RemoveLocation(l)
   set l = null
   set peon = null
@@ -11623,7 +11631,7 @@ function ConstructExpansion takes unit peon, integer unitid returns boolean
     set u = null
   endif
   call TQAddUnit2Job(2 * sleep_multiplier, BUILD_EXPANSION, 0, peon, current_expansion)
-  return IssuePointOrderByIdLoc(peon, unitid, exp_loc_cache)
+  return DebugHeroIssuePointOrderByIdLoc(peon, unitid, exp_loc_cache, "common.eai:ConstructExpansion:11626")
 endfunction
 
 //============================================================================
@@ -11643,23 +11651,23 @@ endfunction
 function BuildMovePeonZeppelin takes unit peon, unit target returns boolean
   if IsUnitInTransport(peon, build_zeppelin) then
     if DistanceBetweenUnits(build_zeppelin, target) > race_max_expa_mine_distance then
-      call IssuePointOrder(build_zeppelin, "move", GetUnitX(target) + GetRandomReal(-200,200), GetUnitY(target) + GetRandomReal(-200,200))
+      call DebugHeroIssuePointOrder(build_zeppelin, "move", GetUnitX(target) + GetRandomReal(-200,200), GetUnitY(target) + GetRandomReal(-200,200), "common.eai:BuildMovePeonZeppelin:11646")
     else
-      call IssueImmediateOrder(build_zeppelin, "stop")
-      call IssueTargetOrder(build_zeppelin, "unload", peon)
+      call DebugHeroIssueImmediateOrder(build_zeppelin, "stop", "common.eai:BuildMovePeonZeppelin:11648")
+      call DebugHeroIssueTargetOrder(build_zeppelin, "unload", peon, "common.eai:BuildMovePeonZeppelin:11649")
       call TQAddUnitJob(0.5, RESET_GUARD_POSITION, 80, build_zeppelin)
       call Sleep(0.5)
-      call IssueImmediateOrder(peon, "stop")
+      call DebugHeroIssueImmediateOrder(peon, "stop", "common.eai:BuildMovePeonZeppelin:11652")
       return true
     endif
   else
     if DistanceBetweenUnits(peon, target) < race_max_expa_mine_distance then
       call RecycleGuardPositionAM(build_zeppelin)
       call GroupRemoveUnit(unit_zepplin_move, build_zeppelin)
-      call IssueImmediateOrder(peon, "stop")
+      call DebugHeroIssueImmediateOrder(peon, "stop", "common.eai:BuildMovePeonZeppelin:11659")
       return true
     else
-      call IssueTargetOrder(peon, "smart", build_zeppelin)
+      call DebugHeroIssueTargetOrder(peon, "smart", build_zeppelin, "common.eai:BuildMovePeonZeppelin:11662")
     endif
   endif
   return false
@@ -11716,7 +11724,7 @@ function StartExpansionAM takes integer qty, integer hall returns integer
     call Trace("AMAIStartexpa: Expansion Taken by someone else")
     set current_expansion = null
     if expansion_peon != null and build_zeppelin != null and UnitAlive(expansion_peon) and IsUnitLoaded(expansion_peon) then
-      call IssueTargetOrder(build_zeppelin, "unload", expansion_peon)
+      call DebugHeroIssueTargetOrder(build_zeppelin, "unload", expansion_peon, "common.eai:StartExpansionAM:11719")
       call TQAddUnitJob(0.5, RESET_GUARD_POSITION, 80, build_zeppelin)
       call TQAddUnitJob(0.5, RESET_GUARD_POSITION, 80, expansion_peon)
     endif
@@ -11797,7 +11805,7 @@ function StartExpansionAM takes integer qty, integer hall returns integer
           call Trace("AMAIStartexpa: No Zeppelin found for transporting peon")
         else
           call GroupAddUnit(unit_zepplin_move, build_zeppelin)
-          call RemoveGuardPosition(build_zeppelin)
+          call DebugHeroRemoveGuardPosition(build_zeppelin, "common.eai:StartExpansionAM:11800")
         endif
       endif
       if (w and build_zeppelin == null) then
@@ -11811,7 +11819,7 @@ function StartExpansionAM takes integer qty, integer hall returns integer
     endif
     if race_uses_mine_expansion then
       call TQAddUnit2Job(2 * sleep_multiplier, BUILD_EXPANSION, 0, expansion_peon, current_expansion)
-      call IssueTargetOrderById(expansion_peon, old_id[hall], current_expansion)
+      call DebugHeroIssueTargetOrderById(expansion_peon, old_id[hall], current_expansion, "common.eai:StartExpansionAM:11814")
     else
       call ConstructExpansion(expansion_peon,old_id[hall])
     endif
@@ -12641,7 +12649,7 @@ function AttackGroupAddUnknown takes nothing returns nothing
     exitwhen u == null
     set id = GetUnitTypeId(u)
     if (IsUnitType(u, UNIT_TYPE_ATTACKS_FLYING) or IsUnitType(u, UNIT_TYPE_ATTACKS_GROUND)) and id != 'ngir' then
-      call AddAssault(60,id)  //other hero and unit , like other race and custom
+      call DebugHeroAddAssault(60,id, "common.eai:AttackGroupAddUnknown:12644")  //other hero and unit , like other race and custom
     endif
     call GroupRemoveUnit(g, u)
   endloop
@@ -12693,7 +12701,7 @@ function FormGroupAM takes integer seconds returns nothing
     call TraceAll("DBG FORMGROUP BEGIN: seconds=" + Int2Str(seconds) + " creepRunning=" + B2S(ordinary_creep_attack_running) + " creepId=" + Int2Str(creep_debug_id) + " attackRunning=" + B2S(attack_running) + " captain=" + Int2Str(CaptainGroupSize()) + " pendingReset=" + Int2Str(BlzGroupGetSize(retreat_reset_pending)) + " readyStrength=" + Int2Str(GetOwnAttackStrength()) + " totalStrength=" + Int2Str(GetOwnStrength()))
   endif
 
-  call InitAssault()
+  call DebugHeroInitAssault("common.eai:FormGroupAM:12696")
 
   loop
     exitwhen index >= attack_length
@@ -12744,9 +12752,9 @@ function FormGroupAM takes integer seconds returns nothing
     call ConversionsAM(desire,unitid)
 
     if count >= desire then
-      call AddAssault(desire,old_id[unitid])
+      call DebugHeroAddAssault(desire,old_id[unitid], "common.eai:FormGroupAM:12747")
     else
-      call AddAssault(count,old_id[unitid])
+      call DebugHeroAddAssault(count,old_id[unitid], "common.eai:FormGroupAM:12749")
     endif
 
     set index = index + 1
@@ -12881,7 +12889,7 @@ function SleepInCombatAM takes boolean ally_override returns nothing
             call TraceAll("DBG RAW ATTACK: SleepInCombat captain=" + Int2Str(CaptainGroupSize()) + " fleeing=" + B2S(isfleeing) + " retreatCtl=" + B2S(retreat_controlled))
             call AttackMoveKill(u)
           elseif (c_ally_total > 0 and not ally_override) then
-            call CaptainAttack(GetUnitX(u), GetUnitY(u))
+            call DebugHeroCaptainAttack(GetUnitX(u), GetUnitY(u), "common.eai:SleepInCombatAM:12884")
           endif
         elseif not isfleeing then
           call TraceAll("DBG ATTACK SUPPRESSED WHILE CANFLEE: source=SleepInCombat captain=" + Int2Str(CaptainGroupSize()) + " combat=" + B2S(CaptainInCombat(true)) + " retreating=" + B2S(CaptainRetreating()) + " attackRunning=" + B2S(attack_running))
@@ -12943,7 +12951,7 @@ function DesperationAssault takes nothing returns nothing
       set u = FirstOfGroup(g)
       exitwhen u == null
       if (IsUnitType(u, UNIT_TYPE_ANCIENT) or not IsUnitType(u, UNIT_TYPE_STRUCTURE)) and UnitAlive(u) and not IsUnitHidden(u) then
-        call AddAssault(60, GetUnitTypeId(u))
+        call DebugHeroAddAssault(60, GetUnitTypeId(u), "common.eai:DesperationAssault:12946")
       endif
       call GroupRemoveUnit(g, u )
     endloop
@@ -13074,7 +13082,7 @@ function CommonSleepUntilTargetDeadAM takes unit target, boolean iscreeping, boo
         if true or CaptainAtGoal() or attack_length_counter == 0 or CaptainInCombat(true) or ally_override or c_ally_total == 0 then
           call AttackMoveXY(R2I(GetLocationX(ally_loc)), R2I(GetLocationY(ally_loc)))
         elseif (c_ally_total > 0 and not ally_override) then
-          call CaptainAttack(GetLocationX(ally_loc), GetLocationY(ally_loc))
+          call DebugHeroCaptainAttack(GetLocationX(ally_loc), GetLocationY(ally_loc), "common.eai:CommonSleepUntilTargetDeadAM:13077")
         endif
       elseif not isfleeing then
         call TraceAll("DBG ATTACK SUPPRESSED WHILE CANFLEE: source=CommonSleepUntilTargetDeadAlly captain=" + Int2Str(CaptainGroupSize()) + " combat=" + B2S(CaptainInCombat(true)) + " retreating=" + B2S(CaptainRetreating()) + " attackRunning=" + B2S(attack_running))
@@ -13093,7 +13101,7 @@ function CommonSleepUntilTargetDeadAM takes unit target, boolean iscreeping, boo
           call TraceAll("DBG RAW ATTACK: CommonSleepUntilTargetDead captain=" + Int2Str(CaptainGroupSize()) + " break=" + B2S(break_attack) + " desperation=" + B2S(desperation_assault) + " attackRunning=" + B2S(attack_running) + " fleeing=" + B2S(isfleeing) + " retreatCtl=" + B2S(retreat_controlled))
           call AttackMoveKill(target)
         elseif (c_ally_total > 0 and not ally_override) then
-          call CaptainAttack(GetUnitX(target), GetUnitY(target))
+          call DebugHeroCaptainAttack(GetUnitX(target), GetUnitY(target), "common.eai:CommonSleepUntilTargetDeadAM:13096")
         endif
       elseif not isfleeing then
         call TraceAll("DBG ATTACK SUPPRESSED WHILE CANFLEE: source=CommonSleepUntilTargetDead captain=" + Int2Str(CaptainGroupSize()) + " combat=" + B2S(CaptainInCombat(true)) + " retreating=" + B2S(CaptainRetreating()) + " attackRunning=" + B2S(attack_running))
@@ -13234,12 +13242,12 @@ function BRRush takes nothing returns boolean
     set br_rush_attacked = true
     call EnableRetreatControl()
     set buildloc = GetUnitLoc(utemp)
-    call RemoveGuardPosition(utemp)
-    call IssueImmediateOrderById(utemp, OrderIdCancel) // Cancel building order
-    call IssueImmediateOrder(utemp, "unroot")  //try unroot
+    call DebugHeroRemoveGuardPosition(utemp, "common.eai:BRRush:13237")
+    call DebugHeroIssueImmediateOrderById(utemp, OrderIdCancel, "common.eai:BRRush:13238") // Cancel building order
+    call DebugHeroIssueImmediateOrder(utemp, "unroot", "common.eai:BRRush:13239")  //try unroot
     call FromGroupAndGhoulsAM(3) // unroot time
     set loc = GetUnitLoc(rushcreep_target)
-    call IssuePointOrderLoc(utemp, "attack", loc)
+    call DebugHeroIssuePointOrderLoc(utemp, "attack", loc, "common.eai:BRRush:13242")
     call RemoveLocation(loc)
     set loc = null
     call AttackMoveKill(rushcreep_target)
@@ -13247,7 +13255,7 @@ function BRRush takes nothing returns boolean
     call SleepInCombatAM(false)
     call Chat(C_Done)
     call Trace("===BR Finished===")
-    call IssuePointOrderLoc( utemp, "move", buildloc)  //prevent inability cannot root
+    call DebugHeroIssuePointOrderLoc( utemp, "move", buildloc, "common.eai:BRRush:13250")  //prevent inability cannot root
     call TQAddUnitJob(0.02, RESET_ANCIENT, 0, utemp)
     call RemoveLocation(buildloc)
     set buildloc = null
@@ -13320,8 +13328,8 @@ function GatherForCreepAttack takes unit target returns boolean
 
   call TraceAll("DBG CGATHER START: creepId=" + Int2Str(creep_debug_id) + " captain=" + Int2Str(CaptainGroupSize()))
 
-  call SetCaptainHome(ATTACK_CAPTAIN, anchor_x, anchor_y)
-  call CaptainGoHome()
+  call DebugHeroSetCaptainHome(ATTACK_CAPTAIN, anchor_x, anchor_y, "common.eai:GatherForCreepAttack:13323")
+  call DebugHeroCaptainGoHome("common.eai:GatherForCreepAttack:13324")
 
   set gathered = CaptainIsHome()
 
@@ -13348,13 +13356,13 @@ function GatherForCreepAttack takes unit target returns boolean
 
   // Restore only our own temporary override. A newer strategic home must survive cleanup.
   if captain_home_revision == home_revision then
-    call SetCaptainHome(ATTACK_CAPTAIN, home_x, home_y)
+    call DebugHeroSetCaptainHome(ATTACK_CAPTAIN, home_x, home_y, "common.eai:GatherForCreepAttack:13351")
   endif
 
   if not gathered then
     // We formed a captain but decided not to launch it.
     // Send those exact native captain members back to their normal home.
-    call CaptainGoHome()
+    call DebugHeroCaptainGoHome("common.eai:GatherForCreepAttack:13357")
   endif
 
   set creep_captain_gather_running = false
@@ -14163,7 +14171,7 @@ function SleepUntilTownDefended takes integer ai_strength returns nothing
   call DebugTraceTownDefense("ENTER")
 
   if not CaptainIsHome() and not CaptainRetreating() then
-      call CaptainGoHome()
+      call DebugHeroCaptainGoHome("common.eai:SleepUntilTownDefended:14166")
    endif  
   // Attack logic still overridden by allies, so commented out - just return to home location 
   //call FormGroupAM(0)
@@ -14192,7 +14200,7 @@ function SleepUntilTownDefended takes integer ai_strength returns nothing
     endif
 
     if not CaptainIsHome() then
-      call CaptainGoHome()
+      call DebugHeroCaptainGoHome("common.eai:SleepUntilTownDefended:14195")
     endif  
     //if CaptainAtGoal() or CaptainInCombat(true) or CaptainInCombat(false) then
       // Attack move to actually defend
@@ -14218,7 +14226,7 @@ function SleepUntilTownDefended takes integer ai_strength returns nothing
     call StaggerSleep(2 * sleep_multiplier, (2 * sleep_multiplier) + 2)
   endloop
   call DebugTraceTownDefense("EXIT")
-  call CaptainGoHome()
+  call DebugHeroCaptainGoHome("common.eai:SleepUntilTownDefended:14221")
   call Trace("==exit Sleep Defend Town==")
 endfunction
 
@@ -14228,12 +14236,12 @@ function AncientExpaAttack takes nothing returns nothing
   local integer i = 0
   local real creepstrength = 0
   call Trace("An Ancient Expansion Attack")
-  call RemoveGuardPosition(ancient_exp_unit)
-  call IssueImmediateOrderById(ancient_exp_unit, OrderIdCancel)
-  call IssueImmediateOrder(ancient_exp_unit, "unroot")
+  call DebugHeroRemoveGuardPosition(ancient_exp_unit, "common.eai:AncientExpaAttack:14231")
+  call DebugHeroIssueImmediateOrderById(ancient_exp_unit, OrderIdCancel, "common.eai:AncientExpaAttack:14232")
+  call DebugHeroIssueImmediateOrder(ancient_exp_unit, "unroot", "common.eai:AncientExpaAttack:14233")
   set ancient_attack_running = true
   call FromGroupAndGhoulsAM(3)
-  call CaptainAttack(GetUnitX(ancient_exp_unit), GetUnitY(ancient_exp_unit))
+  call DebugHeroCaptainAttack(GetUnitX(ancient_exp_unit), GetUnitY(ancient_exp_unit), "common.eai:AncientExpaAttack:14236")
   if (ancient_exp_creep != null and UnitAlive(ancient_exp_creep)) then
     set loc = GetUnitLoc(ancient_exp_creep)
   else
@@ -14243,7 +14251,7 @@ function AncientExpaAttack takes nothing returns nothing
     exitwhen CaptainAtGoal() or DistanceBetweenPoints(army_loc[main_army], loc) < 500 // Attack force at ancient
     call Sleep(1)
   endloop
-  call IssuePointOrderLoc(ancient_exp_unit, "attack", loc)
+  call DebugHeroIssuePointOrderLoc(ancient_exp_unit, "attack", loc, "common.eai:AncientExpaAttack:14246")
   call RemoveLocation(loc)
   set loc = null
   set creepstrength = GetAncientCampStrength()
@@ -14251,7 +14259,7 @@ function AncientExpaAttack takes nothing returns nothing
     // Just creep normally as safer if tree not actually required in attack
   call AttackMoveKillCreep(ancient_exp_creep, false)
   //endif
-  call IssueTargetOrder(ancient_exp_unit, "entangle", ancient_exp_mine)
+  call DebugHeroIssueTargetOrder(ancient_exp_unit, "entangle", ancient_exp_mine, "common.eai:AncientExpaAttack:14254")
   set ancient_attack_running = false
   set ancient_exp_state = 7
 endfunction
@@ -14762,7 +14770,7 @@ function GroupPointOrderAvailable takes group g, string order, real x, real y re
     set u = FirstOfGroup(cg)
     exitwhen u == null
     if not IsRetreatOrderLocked(u) then
-      call IssuePointOrder(u, order, x, y)
+      call DebugHeroIssuePointOrder(u, order, x, y, "common.eai:GroupPointOrderAvailable:14765")
     endif
     call GroupRemoveUnit(cg, u)
   endloop
@@ -14788,15 +14796,15 @@ function ApplyMassHealingItem takes unit u, item mh_i returns nothing
     endif
   endif
 
-  call RemoveGuardPosition(u)
+  call DebugHeroRemoveGuardPosition(u, "common.eai:ApplyMassHealingItem:14791")
   call GroupPointOrderAvailable(urgent_healing_group, "move", GetUnitX(u), GetUnitY(u))
   call GroupPointOrderAvailable(medium_healing_group, "move", GetUnitX(u), GetUnitY(u))
   call GroupPointOrderAvailable(small_healing_group, "move", GetUnitX(u), GetUnitY(u))
-  call IssuePointOrder(u, "move", GetUnitX(hu), GetUnitY(hu))
+  call DebugHeroIssuePointOrder(u, "move", GetUnitX(hu), GetUnitY(hu), "common.eai:ApplyMassHealingItem:14795")
   set time = RMax((GetTimeToReachUnit(u, hu) + GetTimeToReachUnit(hu, u)) / 2,2)    // Average of times. Not accurate as is longer than it should be to definatly make sure units surround the hero
   call Sleep(time)
   if not IsRetreatOrderLocked(u) then
-    call UnitUseItem(u, mh_i)
+    call DebugHeroUnitUseItem(u, mh_i, "common.eai:ApplyMassHealingItem:14799")
   endif
   call RecycleGuardPositionAM(u)
   set hu = null
@@ -14814,7 +14822,7 @@ function ApplyHealingItem takes unit u, item heal_item returns nothing
 	endif
 	set urgent = CopyGroup(urgent_healing_group)
 	set medium = CopyGroup(medium_healing_group)
-	call RemoveGuardPosition(u)
+	call DebugHeroRemoveGuardPosition(u, "common.eai:ApplyHealingItem:14817")
 	call GroupPointOrderAvailable(urgent_healing_group, "move", GetUnitX(u), GetUnitY(u))
 	call GroupPointOrderAvailable(medium_healing_group, "move", GetUnitX(u), GetUnitY(u))
 	call GroupPointOrderAvailable(small_healing_group, "move", GetUnitX(u), GetUnitY(u))
@@ -14824,7 +14832,7 @@ function ApplyHealingItem takes unit u, item heal_item returns nothing
 	elseif GetItemTypeId(heal_item) == old_id[%1] then  //prevent killing high health units
 		set target = FirstOfGroup(urgent)
 		if target != null and not IsRetreatOrderLocked(u) then
-			call UnitUseItemTarget(u, heal_item, target)
+			call DebugHeroUnitUseItemTarget(u, heal_item, target, "common.eai:ApplyHealingItem:14827")
 			call GroupRemoveUnit(urgent, target)
 		endif
 	#ENDINCLUDE
@@ -14833,12 +14841,12 @@ function ApplyHealingItem takes unit u, item heal_item returns nothing
 			exitwhen not UnitHasItem(u, heal_item) or IsRetreatOrderLocked(u)
 			set target = FirstOfGroup(urgent)
 			if target != null then
-				call UnitUseItemTarget(u, heal_item, target)
+				call DebugHeroUnitUseItemTarget(u, heal_item, target, "common.eai:ApplyHealingItem:14836")
 				call GroupRemoveUnit(urgent, target)
 			else
 				set target = FirstOfGroup(medium)
 				if target != null then
-					call UnitUseItemTarget(u, heal_item, target)
+					call DebugHeroUnitUseItemTarget(u, heal_item, target, "common.eai:ApplyHealingItem:14841")
 					call GroupRemoveUnit(medium, target)
 				endif
 			endif
@@ -14858,7 +14866,7 @@ endfunction
 //  Orders unit to use an item that does a global healing effect
 function ApplyGlobalItem takes unit u, item heal_item returns nothing
   if not IsRetreatOrderLocked(u) then
-    call UnitUseItem(u, heal_item)
+    call DebugHeroUnitUseItem(u, heal_item, "common.eai:ApplyGlobalItem:14861")
   endif
 endfunction
 //============================================================================
@@ -14880,7 +14888,7 @@ function HealArmy takes nothing returns nothing
     set mass_healed = false
     call Trace("function HealArmy: Army is badly damaged and needs healing " + Real2Str(hs))
     if not CaptainIsHome() then
-      call CaptainGoHome()
+      call DebugHeroCaptainGoHome("common.eai:HealArmy:14883")
     endif
     set build_emergency_healing_item = 0
     set mh_item = GetMassHealingItem()
@@ -15013,7 +15021,7 @@ function universal_attack_sequence takes nothing returns nothing
 
   if go_home then
     call Trace("UNIVERSAL ATTACK: Going home" )
-    call CaptainGoHome()
+    call DebugHeroCaptainGoHome("common.eai:universal_attack_sequence:15016")
   endif
   set break_attack = false
   set go_home = false

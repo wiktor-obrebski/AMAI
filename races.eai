@@ -739,7 +739,7 @@ function KeepHarvestLocal takes nothing returns nothing
           set buildy = GetUnitY(buildu)
           call RemoveUnit(buildu)
           set buildu = null
-          call IssuePointOrderById(u, GetUnitCurrentOrder(u), buildx, buildy)
+          call DebugHeroIssuePointOrderById(u, GetUnitCurrentOrder(u), buildx, buildy, "races.eai:KeepHarvestLocal:742")
         endif
       endif
       call GroupRemoveUnit(g, u)

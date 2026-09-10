@@ -1,4 +1,5 @@
 #INCLUDE <$VER$\tmp\Blizzard1.j>
+#INCLUDE <Diagnostics\HeroMapGlobals.eai>
     //-----------------------------------------------------------------------
     // Commander globals
     //-----------------------------------------------------------------------
@@ -171,6 +172,8 @@
 #INCLUDESCRIPT <$VER$\custom_common.eai>
 #INCLUDE <$VER$\tmp\Blizzard3Gen.j>
 #INCLUDE <$VER$\tmp\Blizzard4.j>
+
+#INCLUDE <Diagnostics\HeroMapEvents.eai>
 
 function DestroyLastTrigger takes trigger t, triggeraction ta returns nothing
   if (ta != null and t != null) then
@@ -2011,6 +2014,7 @@ function InitHCL takes nothing returns nothing
 endfunction
 
 #INCLUDE <$VER$\tmp\Blizzard5.j>
+    call InitAMAIHeroEvents()
     call InitHCL()
     call InitCommander()
     call InitZoom()

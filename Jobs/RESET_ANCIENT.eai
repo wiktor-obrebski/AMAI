@@ -29,7 +29,7 @@ function ResetAncient takes unit u returns nothing
     set lastbuildy = GetUnitY(buildu)
     call RemoveUnit(buildu)
     set buildu = null
-    call IssuePointOrder( u, "root", lastbuildx, lastbuildy)
+    call DebugHeroIssuePointOrder( u, "root", lastbuildx, lastbuildy, "Jobs/RESET_ANCIENT.eai:ResetAncient:32")
     set retry = retry + 1
   elseif GetUnitCurrentOrder(u) != OrderId("root") and retry >= 2 and (GetUnitX(u) != lastancientx or GetUnitY(u) != lastancienty) then
     // if moving then not rooted
@@ -50,7 +50,7 @@ function ResetAncient takes unit u returns nothing
         set lastbuildy = GetUnitY(buildu)
         call RemoveUnit(buildu)
         set buildu = null
-        call IssuePointOrder( u, "root", lastbuildx, lastbuildy)
+        call DebugHeroIssuePointOrder( u, "root", lastbuildx, lastbuildy, "Jobs/RESET_ANCIENT.eai:ResetAncient:53")
       endif
       call RemoveUnit(buildu)
       set buildu = null

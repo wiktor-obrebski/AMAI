@@ -65,7 +65,7 @@ function ItemExpansionJob takes nothing returns nothing
         call TQAddJob(20, ITEM_EXPANSION, 0)
         return
       endif
-      call RemoveGuardPosition(itemhero) // Potentially a delay though and item can be lost before this happens
+      call DebugHeroRemoveGuardPosition(itemhero, "Jobs/ITEM_EXPANSION.eai:ItemExpansionJob:68") // Potentially a delay though and item can be lost before this happens
       call SetItemDroppable( GetItemOfTypeOnUnit(race_item_expansion_item_id, itemhero), false )  //prevent droppable
       call SetItemPawnable( GetItemOfTypeOnUnit(race_item_expansion_item_id, itemhero), false )  //can selling
       set expitem_buy = true
@@ -87,7 +87,7 @@ function ItemExpansionJob takes nothing returns nothing
           call MarkBadExpansion(current_expansion)
           return
       else
-        call UnitUseItemPoint(itemhero, GetItemOfTypeOnUnit(race_item_expansion_item_id, itemhero), GetLocationX(item_exp_loc), GetLocationY(item_exp_loc))
+        call DebugHeroUnitUseItemPoint(itemhero, GetItemOfTypeOnUnit(race_item_expansion_item_id, itemhero), GetLocationX(item_exp_loc), GetLocationY(item_exp_loc), "Jobs/ITEM_EXPANSION.eai:ItemExpansionJob:90")
         set time_next_try = 1
         set item_exp_state = 3
       endif
@@ -101,8 +101,8 @@ function ItemExpansionJob takes nothing returns nothing
       set item_exp_loc = GetUnitLoc(temp)
       call RemoveUnit(temp)
       set temp = null
-      call RemoveGuardPosition(itemhero)
-      call UnitUseItemPoint(itemhero, GetItemOfTypeOnUnit(race_item_expansion_item_id, itemhero), GetLocationX(item_exp_loc), GetLocationY(item_exp_loc))
+      call DebugHeroRemoveGuardPosition(itemhero, "Jobs/ITEM_EXPANSION.eai:ItemExpansionJob:104")
+      call DebugHeroUnitUseItemPoint(itemhero, GetItemOfTypeOnUnit(race_item_expansion_item_id, itemhero), GetLocationX(item_exp_loc), GetLocationY(item_exp_loc), "Jobs/ITEM_EXPANSION.eai:ItemExpansionJob:105")
       set time_next_try = 1
       call RemoveLocation(item_exp_loc)
       set item_exp_loc = null
