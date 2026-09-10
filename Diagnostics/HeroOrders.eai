@@ -4,12 +4,12 @@ function DebugHeroLog takes string s returns nothing
     return
   endif
   if debug_hero_cache == null then
-    set debug_hero_cache = InitGameCache("AMAI_HeroTrace_P" + I2S(GetAiPlayer()) + ".w3v")
-    call FlushStoredMission(debug_hero_cache, "P" + I2S(GetAiPlayer()))
+    set debug_hero_cache = InitGameCache("AMAI_HeroTrace_P" + Int2Str(GetAiPlayer()) + ".w3v")
+    call FlushStoredMission(debug_hero_cache, "P" + Int2Str(GetAiPlayer()))
   endif
-  call StoreString(debug_hero_cache, "P" + I2S(GetAiPlayer()), "L" + I2S(debug_hero_index), "tms=" + I2S(R2I(TimerGetElapsed(tq_timer) * 1000)) + " " + s)
+  call StoreString(debug_hero_cache, "P" + Int2Str(GetAiPlayer()), "L" + Int2Str(debug_hero_index), "tms=" + Int2Str(R2I(TimerGetElapsed(tq_timer) * 1000)) + " " + s)
   set debug_hero_index = debug_hero_index + 1
-  call StoreInteger(debug_hero_cache, "P" + I2S(GetAiPlayer()), "Count", debug_hero_index)
+  call StoreInteger(debug_hero_cache, "P" + Int2Str(GetAiPlayer()), "Count", debug_hero_index)
   set debug_hero_dirty = true
 endfunction
 
@@ -24,7 +24,7 @@ function DebugHeroState takes unit u returns string
   endif
   set dx = GetUnitX(u) - homeX
   set dy = GetUnitY(u) - homeY
-  return " hero=" + I2S(GetHandleId(u)) + " type=" + I2S(GetUnitTypeId(u)) + " x=" + I2S(R2I(GetUnitX(u))) + " y=" + I2S(R2I(GetUnitY(u))) + " hp=" + I2S(R2I(GetUnitState(u, UNIT_STATE_LIFE))) + " maxHp=" + I2S(R2I(GetUnitState(u, UNIT_STATE_MAX_LIFE))) + " current=" + I2S(GetUnitCurrentOrder(u)) + " homeX=" + I2S(R2I(homeX)) + " homeY=" + I2S(R2I(homeY)) + " distHome=" + I2S(R2I(SquareRoot(dx * dx + dy * dy))) + " retreat=" + B2S(IsUnitInGroup(u, in_retreat_group)) + " pending=" + B2S(IsUnitInGroup(u, retreat_reset_pending)) + " healing=" + B2S(IsUnitInGroup(u, unit_healing)) + " rescue=" + B2S(IsUnitInGroup(u, unit_rescueing)) + " harass=" + B2S(IsUnitInGroup(u, unit_harassing)) + " transport=" + B2S(IsUnitInGroup(u, unit_zepplin_move)) + " buying=" + B2S(IsUnitInGroup(u, unit_buying_item)) + " canFlee=" + B2S(canflee) + " fleeing=" + B2S(isfleeing) + " attack=" + B2S(attack_running) + " retreatCtl=" + B2S(retreat_controlled)
+  return " hero=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " x=" + Int2Str(R2I(GetUnitX(u))) + " y=" + Int2Str(R2I(GetUnitY(u))) + " hp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_LIFE))) + " maxHp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_MAX_LIFE))) + " current=" + Int2Str(GetUnitCurrentOrder(u)) + " homeX=" + Int2Str(R2I(homeX)) + " homeY=" + Int2Str(R2I(homeY)) + " distHome=" + Int2Str(R2I(SquareRoot(dx * dx + dy * dy))) + " retreat=" + B2S(IsUnitInGroup(u, in_retreat_group)) + " pending=" + B2S(IsUnitInGroup(u, retreat_reset_pending)) + " healing=" + B2S(IsUnitInGroup(u, unit_healing)) + " rescue=" + B2S(IsUnitInGroup(u, unit_rescueing)) + " harass=" + B2S(IsUnitInGroup(u, unit_harassing)) + " transport=" + B2S(IsUnitInGroup(u, unit_zepplin_move)) + " buying=" + B2S(IsUnitInGroup(u, unit_buying_item)) + " canFlee=" + B2S(canflee) + " fleeing=" + B2S(isfleeing) + " attack=" + B2S(attack_running) + " retreatCtl=" + B2S(retreat_controlled)
 endfunction
 
 function DebugHeroOrderBefore takes unit u, string source, string kind, integer order, integer target, real x, real y returns integer
@@ -32,13 +32,13 @@ function DebugHeroOrderBefore takes unit u, string source, string kind, integer 
     return 0
   endif
   set debug_hero_request = debug_hero_request + 1
-  call DebugHeroLog("HERO ORDER SOURCE: request=" + I2S(debug_hero_request) + " source=" + source + " kind=" + kind + " order=" + I2S(order) + " target=" + I2S(target) + " tx=" + I2S(R2I(x)) + " ty=" + I2S(R2I(y)) + DebugHeroState(u))
+  call DebugHeroLog("HERO ORDER SOURCE: request=" + Int2Str(debug_hero_request) + " source=" + source + " kind=" + kind + " order=" + Int2Str(order) + " target=" + Int2Str(target) + " tx=" + Int2Str(R2I(x)) + " ty=" + Int2Str(R2I(y)) + DebugHeroState(u))
   return debug_hero_request
 endfunction
 
 function DebugHeroOrderAfter takes unit u, integer request, boolean accepted returns nothing
   if request != 0 then
-    call DebugHeroLog("HERO ORDER RESULT: request=" + I2S(request) + " accepted=" + B2S(accepted) + " hero=" + I2S(GetHandleId(u)) + " current=" + I2S(GetUnitCurrentOrder(u)))
+    call DebugHeroLog("HERO ORDER RESULT: request=" + Int2Str(request) + " accepted=" + B2S(accepted) + " hero=" + Int2Str(GetHandleId(u)) + " current=" + Int2Str(GetUnitCurrentOrder(u)))
   endif
 endfunction
 
@@ -186,14 +186,14 @@ endfunction
 
 function DebugHeroCaptainAttack takes real x, real y, string source returns nothing
   if debug_hero_tracking then
-    call DebugHeroLog("HERO CONTROL: source=" + source + " action=CaptainAttack" + " x=" + I2S(R2I(x)) + " y=" + I2S(R2I(y)))
+    call DebugHeroLog("HERO CONTROL: source=" + source + " action=CaptainAttack" + " x=" + Int2Str(R2I(x)) + " y=" + Int2Str(R2I(y)))
   endif
   call CaptainAttack(x, y)
 endfunction
 
 function DebugHeroSetCaptainHome takes integer captain, real x, real y, string source returns nothing
   if debug_hero_tracking then
-    call DebugHeroLog("HERO CONTROL: source=" + source + " action=SetCaptainHome" + " captain=" + I2S(captain) + " x=" + I2S(R2I(x)) + " y=" + I2S(R2I(y)))
+    call DebugHeroLog("HERO CONTROL: source=" + source + " action=SetCaptainHome" + " captain=" + Int2Str(captain) + " x=" + Int2Str(R2I(x)) + " y=" + Int2Str(R2I(y)))
   endif
   call SetCaptainHome(captain, x, y)
 endfunction
@@ -207,7 +207,7 @@ endfunction
 
 function DebugHeroAddAssault takes integer count, integer unitid, string source returns boolean
   if debug_hero_tracking then
-    call DebugHeroLog("HERO CONTROL: source=" + source + " action=AddAssault" + " count=" + I2S(count) + " unitid=" + I2S(unitid))
+    call DebugHeroLog("HERO CONTROL: source=" + source + " action=AddAssault" + " count=" + Int2Str(count) + " unitid=" + Int2Str(unitid))
   endif
   return AddAssault(count, unitid)
 endfunction

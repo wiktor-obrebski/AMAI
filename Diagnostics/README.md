@@ -76,6 +76,12 @@ support and the replay are complementary evidence.
 
 ## Safety and limits
 
+AI-side formatting uses AMAI `Int2Str`: native `I2S` is not supported in the AI
+VM even though JASS compilation accepts it. The map observer uses map-VM `I2S`.
+The formation regression test executes the logger instead of mocking it away;
+it checks cache names, record keys and that the formation native is reached.
+This does not reproduce Warcraft VM failures or prove the opening stall is fixed.
+
 - Native order wrappers call the original native once with unchanged arguments
   and preserve its return value. All traces are single-line JASS statements.
 - No tactical thresholds, ownership rules, unit orders or random calls are added

@@ -39,10 +39,36 @@ class HeroTrackingTests(unittest.TestCase):
                         self.assertEqual(len(markers), int(enabled and is_hero))
                         self.assertEqual(after, [(values[0], 42 if enabled and is_hero else 0, result)])
 
+    def test_ai_logging_uses_ai_safe_conversion_and_reaches_formation_native(self):
+        for name in ['HeroOrders.eai', 'HeroSnapshots.eai']:
+            self.assertNotRegex((ROOT / 'Diagnostics' / name).read_text(), r'\bI2S\s*\(')
+        calls, records = [], []
+        def unavailable_i2s(value):
+            raise AssertionError('I2S is unavailable in the AI VM')
+        env = dict(debug_hero_tracking=True, debug_hero_cache=None,
+            debug_hero_index=0, debug_hero_dirty=False, tq_timer='timer',
+            I2S=unavailable_i2s, Int2Str=str, R2I=int, GetAiPlayer=lambda:1,
+            TimerGetElapsed=lambda t:130.187,
+            InitGameCache=lambda name:(calls.append(('cache',name)), 'cache')[1],
+            FlushStoredMission=lambda *a:calls.append(('flush',*a)),
+            StoreString=lambda *a:records.append(a),
+            StoreInteger=lambda *a:calls.append(('count',*a)),
+            InitAssault=lambda:calls.append(('assault',)))
+        load_jass_function(env, ORDERS, 'DebugHeroLog')
+        load_jass_function(env, ORDERS, 'DebugHeroInitAssault')
+        env['DebugHeroInitAssault']('FormGroupAM')
+        env['DebugHeroInitAssault']('FormGroupAM')
+        self.assertEqual(calls.count(('cache','AMAI_HeroTrace_P1.w3v')), 1)
+        self.assertEqual(calls.count(('assault',)), 2)
+        self.assertEqual([r[:3] for r in records], [('cache','P1','L0'),('cache','P1','L1')])
+        self.assertTrue(all(r[3].startswith('tms=130187 HERO CONTROL:') for r in records))
+        self.assertEqual(env['debug_hero_index'], 2)
+        self.assertTrue(env['debug_hero_dirty'])
+
     def test_add_assault_keeps_boolean_return(self):
         for result in (True, False):
             calls=[]
-            env=dict(debug_hero_tracking=True, I2S=str, DebugHeroLog=lambda s: None,
+            env=dict(debug_hero_tracking=True, Int2Str=str, DebugHeroLog=lambda s: None,
                      AddAssault=lambda *a: (calls.append(a), result)[1])
             load_jass_function(env, ORDERS, 'DebugHeroAddAssault')
             self.assertIs(env['DebugHeroAddAssault'](3, 100, 'source'), result)
@@ -86,7 +112,7 @@ class HeroTrackingTests(unittest.TestCase):
             IsUnitVisible=lambda u,p:u!='unseen', IsUnitInvisible=lambda u,p:False,
             GetUnitX=lambda u:10, GetUnitY=lambda u:20, main_army=-1,
             DebugHeroLog=logs.append, DebugHeroState=lambda u:' hero=123',
-            I2S=str,R2I=int,B2S=lambda x:str(x).lower(),GetHandleId=lambda u:123,
+            Int2Str=str,R2I=int,B2S=lambda x:str(x).lower(),GetHandleId=lambda u:123,
             IsUnitIllusion=lambda u:False,GetArmyOfUnit=lambda u:0,CaptainGroupSize=lambda:5,
             CaptainInCombat=lambda x:False,town_threatened=False,TownThreatened=lambda:False,
             air_strength=77,no_sleep=True,own_strength=88,ally_strength_sum=99,enemy_strength_sum=111)
