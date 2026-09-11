@@ -17,6 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - Undead will buy an orb of corruption if you have a lich.
 
 ### Fixed
+- Capture units already at recovery, including TP arrivals, without counting them as still travelling.
+- Separate retreat/healing destinations from tactical captain home; retain a recovery town hall until it is lost or a less threatened base is available, and use it for emergency home teleports.
 - Preserve creep-selection state across diagnostic strength queries so creep-start logging cannot change the alliance-target/chat decision.
 - Exclude living retreat-unavailable Ghouls from the ready attack-strength quota so lumber workers cannot replace them in the estimate.
 - Preserve retreat ownership while allowing emergency hero healing and home teleport; support local recovery without shopping or offensive reassignment.

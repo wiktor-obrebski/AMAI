@@ -316,6 +316,8 @@ function UpdateTownThreat takes nothing returns nothing
   
   set playerthreat = ApplyFleeStrengthModifier(distance_threat_mult * army_strength[main_army] / Pow(full_threat_distance, distance_threat_exponent), false) // Converts the players total strength into threat
   if i >= town_num then
+    // Defense may move captain home below; recovery chooses its own owned base.
+    call UpdateRecoveryHome()
     set mode = 3
     set lastFreeNum = 0
     

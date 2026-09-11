@@ -9,8 +9,9 @@ function ResetRetreatJob takes unit u returns nothing
     call TQAddUnitJob(1, RESET_RETREAT, 0, u)
     return
   endif
-  // If the strategic home moved, recovery must follow it instead of parking forever.
-  if UnitAlive(u) and DistanceBetweenPoints_dk(GetUnitLoc(u), captain_home) >= 650 then
+  call UpdateRecoveryHome()
+  // If the recovery base changed, recovery must follow it instead of parking forever.
+  if UnitAlive(u) and DistanceBetweenPoints_dk(GetUnitLoc(u), GetRecoveryHome()) >= 650 then
     call GroupRemoveUnit(retreat_reset_pending, u)
     call GroupAddUnit(in_retreat_group, u)
     call TQAddUnitJob(0, SEND_HOME, 1, u)
