@@ -104,7 +104,7 @@ function GoHomeIfMainHero takes unit u, real x, real y, boolean defer_retreat, s
       endif
       call TeleportCaptain(x, y)
     else
-      call CaptainGoHome()
+      call DebugHeroCaptainGoHome("Jobs/MICRO_HERO.eai:GoHomeIfMainHero:107")
       call TeleportCaptain(x, y)
       set break_attack = attack_running
       set isfleeing = true
@@ -130,7 +130,7 @@ function TeleportHome takes integer hn returns nothing
     endif
   endif  
   call GoHomeIfMainHero(hero_unit[hn], dx, dy, true, "TeleportHome")
-  call UnitUseItemPoint(hero_unit[hn], GetItemOfTypeOnUnit(tp_item, hero_unit[hn]), dx + GetRandomInt(300,500) * ISign(), dy + GetRandomInt(300,500) * ISign())
+  call DebugHeroUnitUseItemPoint(hero_unit[hn], GetItemOfTypeOnUnit(tp_item, hero_unit[hn]), dx + GetRandomInt(300,500) * ISign(), dy + GetRandomInt(300,500) * ISign(), "Jobs/MICRO_HERO.eai:TeleportHome:133")
   set teleporting = true
   if teleportloc != null then
     call RemoveLocation(teleportloc)
@@ -185,7 +185,7 @@ function TeleportToLoc takes unit u, location l returns nothing
   endif
   call GoHomeIfMainHero(u, GetLocationX(loc), GetLocationY(loc), false, "TeleportToLoc")
   set teleporting = true
-  call UnitUseItemPoint(u, GetItemOfTypeOnUnit(tp_item, u), GetLocationX(loc), GetLocationY(loc))
+  call DebugHeroUnitUseItemPoint(u, GetItemOfTypeOnUnit(tp_item, u), GetLocationX(loc), GetLocationY(loc), "Jobs/MICRO_HERO.eai:TeleportToLoc:188")
   call TQAddUnitJob(0.5, TELEPORT, 0, u)
   call RemoveLocation(loc)
   set loc = null
@@ -200,10 +200,10 @@ function ExecuteSaveHero takes integer hn, integer a, unit healer returns nothin
   local integer mFountainID = GetManaFountainID()
 
   if a != ACTION_DO_NOTHING and a != ACTION_TP then
-    call RemoveGuardPosition(hero_unit[hn])
+    call DebugHeroRemoveGuardPosition(hero_unit[hn], "Jobs/MICRO_HERO.eai:ExecuteSaveHero:203")
     if GetUnitAbilityLevel(hero_unit[hn], 'AOwk') > 0 or GetUnitAbilityLevel(hero_unit[hn], 'ANwk') > 0 then
       if not IsUnitInvisible(hero_unit[hn], Player(PLAYER_NEUTRAL_AGGRESSIVE)) then
-        call IssueImmediateOrder(hero_unit[hn], "windwalk")
+        call DebugHeroIssueImmediateOrder(hero_unit[hn], "windwalk", "Jobs/MICRO_HERO.eai:ExecuteSaveHero:206")
       endif
     endif
     if a != ACTION_HEALER and hero_unit[hn] == major_hero then
@@ -219,14 +219,14 @@ function ExecuteSaveHero takes integer hn, integer a, unit healer returns nothin
       set loc = GetSubtractionLoc(unitloc, last_enemy_loc)
       set l = GetProjectedLoc(unitloc, loc, 350)
       call TQAddUnitJob(GetTimeToReachLoc(hero_unit[hn], l) + 1, RESET_GUARD_POSITION, 0, hero_unit[hn])
-      call IssuePointOrderLoc(hero_unit[hn], "move", l)
+      call DebugHeroIssuePointOrderLoc(hero_unit[hn], "move", l, "Jobs/MICRO_HERO.eai:ExecuteSaveHero:222")
       call RemoveLocation(l)
       set l = null
       call RemoveLocation(loc)
       set loc = null
     else
       call TQAddUnitJob(GetTimeToReachLoc(hero_unit[hn], unitloc) + 1, RESET_GUARD_POSITION, 0, hero_unit[hn])
-      call IssuePointOrderLoc(hero_unit[hn], "move", unitloc)
+      call DebugHeroIssuePointOrderLoc(hero_unit[hn], "move", unitloc, "Jobs/MICRO_HERO.eai:ExecuteSaveHero:229")
     endif
     call RemoveLocation(unitloc)
     set unitloc = null
@@ -237,12 +237,12 @@ function ExecuteSaveHero takes integer hn, integer a, unit healer returns nothin
     call CreateDebugTag("HERO: Going to Fountain", 10, hero_unit[hn], 4.00, 2.00)
     call GroupAddUnit(unit_healing, hero_unit[hn])
     call TQAddUnitJob(0, HEALTH_FOUNTAIN, 80, hero_unit[hn])
-    call IssuePointOrder(hero_unit[hn], "move", GetUnitX(nearest_neutral[hFountainID]), GetUnitY(nearest_neutral[hFountainID]))
+    call DebugHeroIssuePointOrder(hero_unit[hn], "move", GetUnitX(nearest_neutral[hFountainID]), GetUnitY(nearest_neutral[hFountainID]), "Jobs/MICRO_HERO.eai:ExecuteSaveHero:240")
   elseif a == ACTION_MANA_FOUNTAIN then
     call CreateDebugTag("HERO: Going to Mana Fountain", 10, hero_unit[hn], 4.00, 2.00)
     call GroupAddUnit(unit_healing, hero_unit[hn])
     call TQAddUnitJob(0, MANA_FOUNTAIN, 80, hero_unit[hn])
-    call IssuePointOrder(hero_unit[hn], "move", GetUnitX(nearest_neutral[mFountainID]), GetUnitY(nearest_neutral[mFountainID]))
+    call DebugHeroIssuePointOrder(hero_unit[hn], "move", GetUnitX(nearest_neutral[mFountainID]), GetUnitY(nearest_neutral[mFountainID]), "Jobs/MICRO_HERO.eai:ExecuteSaveHero:245")
   elseif a == ACTION_GO_HOME then
     //call UnitGoHome(hero_unit[hn])
     call CreateDebugTag("HERO: Going Home", 10, hero_unit[hn], 4.00, 2.00)

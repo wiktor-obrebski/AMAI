@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Diagnostics
+- Use AMAI Int2Str in AI hero diagnostics; native I2S is not supported in the AI VM. Exercise the real logger in the formation-wrapper regression test.
+- Avoid shadowing the global `hero` array in hero tracking; add a diagnostic variable-name regression check.
+- Trace hero order sources/results and captain/guard writes, with two-second position, retreat-state and nearby-support snapshots.
+- Add a passive map-side hero order observer using a separate cache; document full-map installation, clock alignment, unknown-source handling and runtime limitations in `Diagnostics/README.md`.
+
 ### Changed
 - Additional peons needed for an expansion will start to be trained early.
 - Added boots of speed to all strategies.

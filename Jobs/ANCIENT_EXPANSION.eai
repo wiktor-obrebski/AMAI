@@ -76,8 +76,8 @@ function AncientExpansionJob takes nothing returns nothing
         set ancient_exp_wisp = GetExpansionPeon2(ancient_exp_wisp)
       endif
       if ancient_exp_creep != null and ancient_exp_wisp != null then
-          call RemoveGuardPosition(ancient_exp_wisp)
-          call IssuePointOrderByIdLoc(ancient_exp_wisp, old_id[racial_expansion], ancient_exp_loc)
+          call DebugHeroRemoveGuardPosition(ancient_exp_wisp, "Jobs/ANCIENT_EXPANSION.eai:AncientExpansionJob:79")
+          call DebugHeroIssuePointOrderByIdLoc(ancient_exp_wisp, old_id[racial_expansion], ancient_exp_loc, "Jobs/ANCIENT_EXPANSION.eai:AncientExpansionJob:80")
           set ancient_exp_state = 2
         call CreateDebugTag("Expansion State 0 - Prep ancient build", 10, ancient_exp_wisp, 3.00, 1.50)
       else
@@ -94,7 +94,7 @@ function AncientExpansionJob takes nothing returns nothing
     endif
     if UnitAlive(ancient_exp_wisp) and GetUnitCurrentOrder(ancient_exp_wisp) != old_id[racial_expansion] then
       call CreateDebugTag("Ancient Exp 1 - Building", 10, ancient_exp_wisp, 3.00, 1.50)
-      call RemoveGuardPosition(ancient_exp_wisp)
+      call DebugHeroRemoveGuardPosition(ancient_exp_wisp, "Jobs/ANCIENT_EXPANSION.eai:AncientExpansionJob:97")
       set anc_retry = anc_retry + 1
       if anc_retry > 3 then
         set ancient_exp_state = 4 // Got stuck, likely location not buildable or reachable
@@ -104,7 +104,7 @@ function AncientExpansionJob takes nothing returns nothing
         set ancient_exp_loc = GetUnitLoc(u)
         call RemoveUnit(u)
         set u = null
-        call IssuePointOrderByIdLoc(ancient_exp_wisp, old_id[racial_expansion], ancient_exp_loc)
+        call DebugHeroIssuePointOrderByIdLoc(ancient_exp_wisp, old_id[racial_expansion], ancient_exp_loc, "Jobs/ANCIENT_EXPANSION.eai:AncientExpansionJob:107")
       endif
       call TQAddJob(2, ANCIENT_EXPANSION, 0)
       return  
@@ -138,15 +138,15 @@ function AncientExpansionJob takes nothing returns nothing
     if ancient_exp_unit == null or not UnitAlive(ancient_exp_unit) then
       set ancient_exp_state = 4
     else
-      call RemoveGuardPosition(ancient_exp_unit)
-      call IssueImmediateOrderById(ancient_exp_unit, OrderIdCancel)
-      call IssueImmediateOrder(ancient_exp_unit, "unroot")
+      call DebugHeroRemoveGuardPosition(ancient_exp_unit, "Jobs/ANCIENT_EXPANSION.eai:AncientExpansionJob:141")
+      call DebugHeroIssueImmediateOrderById(ancient_exp_unit, OrderIdCancel, "Jobs/ANCIENT_EXPANSION.eai:AncientExpansionJob:142")
+      call DebugHeroIssueImmediateOrder(ancient_exp_unit, "unroot", "Jobs/ANCIENT_EXPANSION.eai:AncientExpansionJob:143")
       set ancient_exp_state = 6
     endif
     call TQAddJob(3, ANCIENT_EXPANSION, 0) // time to unroot
   elseif ancient_exp_state == 6 then  
     call CreateDebugTag("Ancient Exp 2: Passive mode End", 10, ancient_exp_unit, 3.00, 1.50)
-    call IssueTargetOrder(ancient_exp_unit, "entangle", ancient_exp_mine)
+    call DebugHeroIssueTargetOrder(ancient_exp_unit, "entangle", ancient_exp_mine, "Jobs/ANCIENT_EXPANSION.eai:AncientExpansionJob:149")
     call TQAddJob(1, ANCIENT_EXPANSION, 0)
     set anc_retry = 0
     set ancient_exp_state = 7
@@ -156,7 +156,7 @@ function AncientExpansionJob takes nothing returns nothing
     if ancient_exp_unit == null or not UnitAlive(ancient_exp_unit) then
       set ancient_exp_state = 4
     elseif UnitAlive(ancient_exp_unit) and GetUnitCurrentOrder(ancient_exp_unit) != OrderId("entangle") and anc_retry < 3 then
-      call IssueTargetOrder(ancient_exp_unit, "entangle", ancient_exp_mine)
+      call DebugHeroIssueTargetOrder(ancient_exp_unit, "entangle", ancient_exp_mine, "Jobs/ANCIENT_EXPANSION.eai:AncientExpansionJob:159")
       set anc_retry = anc_retry + 1
     elseif UnitAlive(ancient_exp_unit) and GetUnitCurrentOrder(ancient_exp_unit) != OrderId("entangle") then
       call RecycleGuardPositionAM(ancient_exp_unit)

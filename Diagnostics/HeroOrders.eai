@@ -1,0 +1,214 @@
+// Leaf order writers are tagged explicitly: no shared "current job" across sleeping threads.
+function DebugHeroLog takes string s returns nothing
+  if not debug_hero_tracking then
+    return
+  endif
+  if debug_hero_cache == null then
+    set debug_hero_cache = InitGameCache("AMAI_HeroTrace_P" + Int2Str(GetAiPlayer()) + ".w3v")
+    call FlushStoredMission(debug_hero_cache, "P" + Int2Str(GetAiPlayer()))
+  endif
+  call StoreString(debug_hero_cache, "P" + Int2Str(GetAiPlayer()), "L" + Int2Str(debug_hero_index), "tms=" + Int2Str(R2I(TimerGetElapsed(tq_timer) * 1000)) + " " + s)
+  set debug_hero_index = debug_hero_index + 1
+  call StoreInteger(debug_hero_cache, "P" + Int2Str(GetAiPlayer()), "Count", debug_hero_index)
+  set debug_hero_dirty = true
+endfunction
+
+function DebugHeroState takes unit u returns string
+  local real homeX = 0
+  local real homeY = 0
+  local real dx = 0
+  local real dy = 0
+  if captain_home != null then
+    set homeX = GetLocationX(captain_home)
+    set homeY = GetLocationY(captain_home)
+  endif
+  set dx = GetUnitX(u) - homeX
+  set dy = GetUnitY(u) - homeY
+  return " hero=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " x=" + Int2Str(R2I(GetUnitX(u))) + " y=" + Int2Str(R2I(GetUnitY(u))) + " hp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_LIFE))) + " maxHp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_MAX_LIFE))) + " current=" + Int2Str(GetUnitCurrentOrder(u)) + " homeX=" + Int2Str(R2I(homeX)) + " homeY=" + Int2Str(R2I(homeY)) + " distHome=" + Int2Str(R2I(SquareRoot(dx * dx + dy * dy))) + " retreat=" + B2S(IsUnitInGroup(u, in_retreat_group)) + " pending=" + B2S(IsUnitInGroup(u, retreat_reset_pending)) + " healing=" + B2S(IsUnitInGroup(u, unit_healing)) + " rescue=" + B2S(IsUnitInGroup(u, unit_rescueing)) + " harass=" + B2S(IsUnitInGroup(u, unit_harassing)) + " transport=" + B2S(IsUnitInGroup(u, unit_zepplin_move)) + " buying=" + B2S(IsUnitInGroup(u, unit_buying_item)) + " canFlee=" + B2S(canflee) + " fleeing=" + B2S(isfleeing) + " attack=" + B2S(attack_running) + " retreatCtl=" + B2S(retreat_controlled)
+endfunction
+
+function DebugHeroOrderBefore takes unit u, string source, string kind, integer order, integer target, real x, real y returns integer
+  if not debug_hero_tracking or u == null or not IsUnitType(u, UNIT_TYPE_HERO) then
+    return 0
+  endif
+  set debug_hero_request = debug_hero_request + 1
+  call DebugHeroLog("HERO ORDER SOURCE: request=" + Int2Str(debug_hero_request) + " source=" + source + " kind=" + kind + " order=" + Int2Str(order) + " target=" + Int2Str(target) + " tx=" + Int2Str(R2I(x)) + " ty=" + Int2Str(R2I(y)) + DebugHeroState(u))
+  return debug_hero_request
+endfunction
+
+function DebugHeroOrderAfter takes unit u, integer request, boolean accepted returns nothing
+  if request != 0 then
+    call DebugHeroLog("HERO ORDER RESULT: request=" + Int2Str(request) + " accepted=" + B2S(accepted) + " hero=" + Int2Str(GetHandleId(u)) + " current=" + Int2Str(GetUnitCurrentOrder(u)))
+  endif
+endfunction
+
+function DebugHeroIssueImmediateOrder takes unit u, string order, string source returns boolean
+  local integer request = 0
+  local boolean accepted = false
+  if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
+    set request = DebugHeroOrderBefore(u, source, "immediate", OrderId(order), 0, 0, 0)
+  endif
+  set accepted = IssueImmediateOrder(u, order)
+  call DebugHeroOrderAfter(u, request, accepted)
+  return accepted
+endfunction
+
+function DebugHeroIssueImmediateOrderById takes unit u, integer order, string source returns boolean
+  local integer request = 0
+  local boolean accepted = false
+  if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
+    set request = DebugHeroOrderBefore(u, source, "immediate", order, 0, 0, 0)
+  endif
+  set accepted = IssueImmediateOrderById(u, order)
+  call DebugHeroOrderAfter(u, request, accepted)
+  return accepted
+endfunction
+
+function DebugHeroIssuePointOrder takes unit u, string order, real x, real y, string source returns boolean
+  local integer request = 0
+  local boolean accepted = false
+  if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
+    set request = DebugHeroOrderBefore(u, source, "point", OrderId(order), 0, x, y)
+  endif
+  set accepted = IssuePointOrder(u, order, x, y)
+  call DebugHeroOrderAfter(u, request, accepted)
+  return accepted
+endfunction
+
+function DebugHeroIssuePointOrderById takes unit u, integer order, real x, real y, string source returns boolean
+  local integer request = 0
+  local boolean accepted = false
+  if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
+    set request = DebugHeroOrderBefore(u, source, "point", order, 0, x, y)
+  endif
+  set accepted = IssuePointOrderById(u, order, x, y)
+  call DebugHeroOrderAfter(u, request, accepted)
+  return accepted
+endfunction
+
+function DebugHeroIssuePointOrderLoc takes unit u, string order, location loc, string source returns boolean
+  local integer request = 0
+  local boolean accepted = false
+  if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
+    set request = DebugHeroOrderBefore(u, source, "point", OrderId(order), 0, GetLocationX(loc), GetLocationY(loc))
+  endif
+  set accepted = IssuePointOrderLoc(u, order, loc)
+  call DebugHeroOrderAfter(u, request, accepted)
+  return accepted
+endfunction
+
+function DebugHeroIssuePointOrderByIdLoc takes unit u, integer order, location loc, string source returns boolean
+  local integer request = 0
+  local boolean accepted = false
+  if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
+    set request = DebugHeroOrderBefore(u, source, "point", order, 0, GetLocationX(loc), GetLocationY(loc))
+  endif
+  set accepted = IssuePointOrderByIdLoc(u, order, loc)
+  call DebugHeroOrderAfter(u, request, accepted)
+  return accepted
+endfunction
+
+function DebugHeroIssueTargetOrder takes unit u, string order, widget target, string source returns boolean
+  local integer request = 0
+  local boolean accepted = false
+  if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
+    set request = DebugHeroOrderBefore(u, source, "target", OrderId(order), GetHandleId(target), GetWidgetX(target), GetWidgetY(target))
+  endif
+  set accepted = IssueTargetOrder(u, order, target)
+  call DebugHeroOrderAfter(u, request, accepted)
+  return accepted
+endfunction
+
+function DebugHeroIssueTargetOrderById takes unit u, integer order, widget target, string source returns boolean
+  local integer request = 0
+  local boolean accepted = false
+  if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
+    set request = DebugHeroOrderBefore(u, source, "target", order, GetHandleId(target), GetWidgetX(target), GetWidgetY(target))
+  endif
+  set accepted = IssueTargetOrderById(u, order, target)
+  call DebugHeroOrderAfter(u, request, accepted)
+  return accepted
+endfunction
+
+function DebugHeroUnitUseItem takes unit u, item it, string source returns boolean
+  local integer request = 0
+  local boolean accepted = false
+  if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
+    set request = DebugHeroOrderBefore(u, source, "item", GetItemTypeId(it), GetHandleId(it), 0, 0)
+  endif
+  set accepted = UnitUseItem(u, it)
+  call DebugHeroOrderAfter(u, request, accepted)
+  return accepted
+endfunction
+
+function DebugHeroUnitUseItemPoint takes unit u, item it, real x, real y, string source returns boolean
+  local integer request = 0
+  local boolean accepted = false
+  if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
+    set request = DebugHeroOrderBefore(u, source, "itemPoint", GetItemTypeId(it), GetHandleId(it), x, y)
+  endif
+  set accepted = UnitUseItemPoint(u, it, x, y)
+  call DebugHeroOrderAfter(u, request, accepted)
+  return accepted
+endfunction
+
+function DebugHeroUnitUseItemTarget takes unit u, item it, widget target, string source returns boolean
+  local integer request = 0
+  local boolean accepted = false
+  if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
+    set request = DebugHeroOrderBefore(u, source, "itemTarget", GetItemTypeId(it), GetHandleId(target), GetWidgetX(target), GetWidgetY(target))
+  endif
+  set accepted = UnitUseItemTarget(u, it, target)
+  call DebugHeroOrderAfter(u, request, accepted)
+  return accepted
+endfunction
+
+function DebugHeroRemoveGuardPosition takes unit u, string source returns nothing
+  if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
+    call DebugHeroLog("HERO CONTROL: source=" + source + " action=RemoveGuardPosition" + DebugHeroState(u))
+  endif
+  call RemoveGuardPosition(u)
+endfunction
+
+function DebugHeroRecycleGuardPosition takes unit u, string source returns nothing
+  if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
+    call DebugHeroLog("HERO CONTROL: source=" + source + " action=RecycleGuardPosition" + DebugHeroState(u))
+  endif
+  call RecycleGuardPosition(u)
+endfunction
+
+function DebugHeroCaptainGoHome takes string source returns nothing
+  if debug_hero_tracking then
+    call DebugHeroLog("HERO CONTROL: source=" + source + " action=CaptainGoHome")
+  endif
+  call CaptainGoHome()
+endfunction
+
+function DebugHeroCaptainAttack takes real x, real y, string source returns nothing
+  if debug_hero_tracking then
+    call DebugHeroLog("HERO CONTROL: source=" + source + " action=CaptainAttack" + " x=" + Int2Str(R2I(x)) + " y=" + Int2Str(R2I(y)))
+  endif
+  call CaptainAttack(x, y)
+endfunction
+
+function DebugHeroSetCaptainHome takes integer captain, real x, real y, string source returns nothing
+  if debug_hero_tracking then
+    call DebugHeroLog("HERO CONTROL: source=" + source + " action=SetCaptainHome" + " captain=" + Int2Str(captain) + " x=" + Int2Str(R2I(x)) + " y=" + Int2Str(R2I(y)))
+  endif
+  call SetCaptainHome(captain, x, y)
+endfunction
+
+function DebugHeroInitAssault takes string source returns nothing
+  if debug_hero_tracking then
+    call DebugHeroLog("HERO CONTROL: source=" + source + " action=InitAssault")
+  endif
+  call InitAssault()
+endfunction
+
+function DebugHeroAddAssault takes integer count, integer unitid, string source returns boolean
+  if debug_hero_tracking then
+    call DebugHeroLog("HERO CONTROL: source=" + source + " action=AddAssault" + " count=" + Int2Str(count) + " unitid=" + Int2Str(unitid))
+  endif
+  return AddAssault(count, unitid)
+endfunction
+

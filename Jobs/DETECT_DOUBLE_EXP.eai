@@ -147,7 +147,7 @@ function CheckDoubleExpansion takes nothing returns nothing
     if CheckDoubleExpansionsClaimedInArea(GetUnitX(u), GetUnitY(u), false) then
       if double_expansion_ally_present then
         if GetUnitState(u, UNIT_STATE_LIFE) < GetUnitState(u, UNIT_STATE_MAX_LIFE) then
-          call IssueImmediateOrderById(u, order_cancel)
+          call DebugHeroIssueImmediateOrderById(u, order_cancel, "Jobs/DETECT_DOUBLE_EXP.eai:CheckDoubleExpansion:150")
           if UnitAlive(u) and double_expansion_allyhuman_present then
             // Simulated cancel as real cancel failed as it is actually successfully built at this point.
             // Human probrably wants your expansion gone and attacked it

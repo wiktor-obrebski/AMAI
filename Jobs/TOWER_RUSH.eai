@@ -14,7 +14,7 @@ function TowerRushRecoveryBuild takes nothing returns nothing
 		exitwhen u == null or i > race_tower_peon
 		if GetOwningPlayer(u) == ai_player and IsUnitType(u, UNIT_TYPE_STRUCTURE) and UnitAlive(u) then
 			if builder[i] != null and UnitAlive(builder[i]) then
-				call IssueTargetOrder(builder[i], "unsummon", u)
+				call DebugHeroIssueTargetOrder(builder[i], "unsummon", u, "Jobs/TOWER_RUSH.eai:TowerRushRecoveryBuild:17")
 				set s = 1
 			endif
 			set i = i + 1
@@ -35,7 +35,7 @@ function TowerRushRecoveryBuild takes nothing returns nothing
 	set i = 1
 	loop
 		exitwhen i > race_tower_peon
-		call IssuePointOrderLoc(builder[i], "move", home_location)
+		call DebugHeroIssuePointOrderLoc(builder[i], "move", home_location, "Jobs/TOWER_RUSH.eai:TowerRushRecoveryBuild:38")
 		call RecycleGuardPositionAM(builder[i])
 		set builder[i] = null
 		set i = i + 1
@@ -58,12 +58,12 @@ function TowerRushHeroControl_k takes unit u, location t returns nothing
 	set l = GetUnitLoc(u)
 	if not tower_peon_inplace then
 		call CreateDebugTag("TRush: hero moving", 10, u, 4.00, 2.00)
-		call RemoveGuardPosition(u)
-		call IssuePointOrder(u, "move", tower_peon_point_x, tower_peon_point_y)
+		call DebugHeroRemoveGuardPosition(u, "Jobs/TOWER_RUSH.eai:TowerRushHeroControl_k:61")
+		call DebugHeroIssuePointOrder(u, "move", tower_peon_point_x, tower_peon_point_y, "Jobs/TOWER_RUSH.eai:TowerRushHeroControl_k:62")
 	elseif DistanceBetweenPoints(l, t) > 200 then
 		call CreateDebugTag("TRush: hero moving", 10, u, 4.00, 2.00)
-		call RemoveGuardPosition(u)
-		call IssuePointOrderLoc(u, "move", t)
+		call DebugHeroRemoveGuardPosition(u, "Jobs/TOWER_RUSH.eai:TowerRushHeroControl_k:65")
+		call DebugHeroIssuePointOrderLoc(u, "move", t, "Jobs/TOWER_RUSH.eai:TowerRushHeroControl_k:66")
 	endif
 	if DistanceBetweenPoints(l, toweringplayerloc) <= DistanceBetweenPoints(t, toweringplayerloc) + 230 then
 		call CreateDebugTag("TRush: Use item", 10, u, 4.00, 2.00)
@@ -77,12 +77,12 @@ function TowerRushHeroControl_k takes unit u, location t returns nothing
 			set unitloc = GetUnitLoc(loccheck)
 			call RemoveUnit(loccheck)
 			if unitloc != null then
-				call RemoveGuardPosition(u)
-				call UnitUseItemPoint(u, it, GetLocationX(unitloc), GetLocationY(unitloc))
+				call DebugHeroRemoveGuardPosition(u, "Jobs/TOWER_RUSH.eai:TowerRushHeroControl_k:80")
+				call DebugHeroUnitUseItemPoint(u, it, GetLocationX(unitloc), GetLocationY(unitloc), "Jobs/TOWER_RUSH.eai:TowerRushHeroControl_k:81")
 				call RemoveLocation(unitloc)
 			else
-				call RemoveGuardPosition(u)
-				call UnitUseItemPoint(u, it, GetLocationX(t), GetLocationY(t))
+				call DebugHeroRemoveGuardPosition(u, "Jobs/TOWER_RUSH.eai:TowerRushHeroControl_k:84")
+				call DebugHeroUnitUseItemPoint(u, it, GetLocationX(t), GetLocationY(t), "Jobs/TOWER_RUSH.eai:TowerRushHeroControl_k:85")
 			endif
 		endif
 		set it = null
@@ -97,10 +97,10 @@ endfunction
 function TowerRushBuilderFirstControl takes unit u, unit hall returns integer
 	if hall != null and DistanceBetweenUnits(u, hall) < 1000 then
 		if GetUnitAbilityLevel(u, 'ANha') != 0 or GetUnitAbilityLevel(u, 'Ahar') != 0 or GetUnitAbilityLevel(u, 'Ahr3') != 0 then
-			call IssueImmediateOrder( u, "returnresources" )
+			call DebugHeroIssueImmediateOrder( u, "returnresources" , "Jobs/TOWER_RUSH.eai:TowerRushBuilderFirstControl:100")
 		endif
 		if race_militia_available and DistanceBetweenPoints_kd(toweringplayerloc, GetUnitLoc(u)) > 6800 then
-			call IssueImmediateOrder( u, race_militia_unitstring )
+			call DebugHeroIssueImmediateOrder( u, race_militia_unitstring , "Jobs/TOWER_RUSH.eai:TowerRushBuilderFirstControl:103")
 		endif
 		return 1
 	endif
@@ -138,7 +138,7 @@ function TowerRushBuilderControl_k takes unit u, location t returns nothing
 	endif
 	if dist >= 800 and (id == OrderId("stop") or id != OrderId("move")) and (id != old_id[race_tower_id] and id != old_id[racial_shop]) then
 		call CreateDebugTag("TRush: builder moving", 10, u, 4.00, 2.00)
-		call IssuePointOrderLoc(u, "move", t)
+		call DebugHeroIssuePointOrderLoc(u, "move", t, "Jobs/TOWER_RUSH.eai:TowerRushBuilderControl_k:141")
 	elseif dist<= 800 then
 		set tower_peon_inplace = true
 		if id == 0 or (id != OrderId("smart") and id != OrderId("repair") and id != OrderId("renew") and id != OrderId("restoration") and id != old_id[race_tower_id] and id != old_id[racial_shop]) then  //Improve efficiency
@@ -225,17 +225,17 @@ function TowerRushTowerMoveControl_k takes unit u, location t returns nothing  /
 			set unitloc = GetUnitLoc(loccheck)
 			call RemoveUnit(loccheck)
 			if not IsTerrainPathable(GetLocationX(unitloc), GetLocationY(unitloc), PATHING_TYPE_BUILDABILITY) then
-				call RemoveGuardPosition(u)
-				call IssueImmediateOrder( u, race_tower_moveendstring)
-				call IssuePointOrderLoc( u, race_tower_movestartstring, unitloc)  //move tree
+				call DebugHeroRemoveGuardPosition(u, "Jobs/TOWER_RUSH.eai:TowerRushTowerMoveControl_k:228")
+				call DebugHeroIssueImmediateOrder( u, race_tower_moveendstring, "Jobs/TOWER_RUSH.eai:TowerRushTowerMoveControl_k:229")
+				call DebugHeroIssuePointOrderLoc( u, race_tower_movestartstring, unitloc, "Jobs/TOWER_RUSH.eai:TowerRushTowerMoveControl_k:230")  //move tree
 			endif
 			call RemoveLocation(unitloc)
 			set id = GetUnitCurrentOrder(u)  // update order
 		endif
 	endif
 	if s >= 1 and (DistanceBetweenPoints(l, toweringplayerloc) <= DistanceBetweenPoints(t, toweringplayerloc) or id != OrderId(race_tower_movestartstring) or s < GetUnitState(u, UNIT_STATE_MAX_LIFE) * 0.5) then
-		call RemoveGuardPosition(u)
-		call IssuePointOrderLoc( u, race_tower_movestartstring, l)
+		call DebugHeroRemoveGuardPosition(u, "Jobs/TOWER_RUSH.eai:TowerRushTowerMoveControl_k:237")
+		call DebugHeroIssuePointOrderLoc( u, race_tower_movestartstring, l, "Jobs/TOWER_RUSH.eai:TowerRushTowerMoveControl_k:238")
 	endif
 	call RemoveLocation(l)
 	set l = null
@@ -248,7 +248,7 @@ function TowerRushSetBuilder takes unit u returns boolean
 		return false
 	endif
 	if tower_attack_run == true then
-		call RemoveGuardPosition(u)
+		call DebugHeroRemoveGuardPosition(u, "Jobs/TOWER_RUSH.eai:TowerRushSetBuilder:251")
 	endif
 	return true
 endfunction
@@ -315,14 +315,14 @@ function TowerRushJob takes nothing returns nothing
 						// Prefer higher upgrade when appropriate and when requirements for doing so are met
 						if (randomnum == 4 or not CanBuildUnit(race_tower_id)) and race_tower_upgrade2 != 0 and TownCount(race_tower_upgrade2) < 2 then
 							if CanBuildUnit(race_tower_upgrade2) then
-								call IssueImmediateOrderById(u, old_id[race_tower_upgrade2])
+								call DebugHeroIssueImmediateOrderById(u, old_id[race_tower_upgrade2], "Jobs/TOWER_RUSH.eai:TowerRushJob:318")
 							else
 								call TQAddJob(4, TOWER_RUSH, 0)
 								return
 							endif
 						elseif race_tower_upgrade != 0 then
 							if CanBuildUnit(race_tower_upgrade) then
-								call IssueImmediateOrderById(u, old_id[race_tower_upgrade])
+								call DebugHeroIssueImmediateOrderById(u, old_id[race_tower_upgrade], "Jobs/TOWER_RUSH.eai:TowerRushJob:325")
 							else
 								call TQAddJob(4, TOWER_RUSH, 0)
 								return
@@ -345,9 +345,9 @@ function TowerRushJob takes nothing returns nothing
 			if GetUnitState(u, UNIT_STATE_LIFE) < GetUnitState(u, UNIT_STATE_MAX_LIFE) * 0.7 then
 				set randomnum = GetRandomInt(1, 4)
 				if builder[randomnum] != null and GetUnitCurrentOrder(builder[randomnum]) == 0 then
-					call IssueTargetOrder(builder[randomnum], "repair", u )
-					call IssueTargetOrder(builder[randomnum], "renew", u )
-					call IssueTargetOrder(builder[randomnum], "restoration", u )
+					call DebugHeroIssueTargetOrder(builder[randomnum], "repair", u , "Jobs/TOWER_RUSH.eai:TowerRushJob:348")
+					call DebugHeroIssueTargetOrder(builder[randomnum], "renew", u , "Jobs/TOWER_RUSH.eai:TowerRushJob:349")
+					call DebugHeroIssueTargetOrder(builder[randomnum], "restoration", u , "Jobs/TOWER_RUSH.eai:TowerRushJob:350")
 					call CreateDebugTag("TRush: repair tower", 10, builder[randomnum], 4.00, 2.00)
 				endif
 			endif
@@ -437,11 +437,11 @@ function TowerRushJob takes nothing returns nothing
 				set u = FirstOfGroup(g)
 				exitwhen u == null
 				if GetOwningPlayer(u) == ai_player and IsUnitType(u, UNIT_TYPE_STRUCTURE) and UnitAlive(u) then
-					call IssueImmediateOrderById( u, order_cancel)  //Cancel can recycling resources and prevent AI run FAST BUILD
+					call DebugHeroIssueImmediateOrderById( u, order_cancel, "Jobs/TOWER_RUSH.eai:TowerRushJob:440")  //Cancel can recycling resources and prevent AI run FAST BUILD
 					if race_sell_ziggurats then
 						call Unsummon(u)  // if build done, sell
 						if builder[i] != null and UnitAlive(builder[i]) then
-							call IssueTargetOrder(builder[i], "unsummon", u)
+							call DebugHeroIssueTargetOrder(builder[i], "unsummon", u, "Jobs/TOWER_RUSH.eai:TowerRushJob:444")
 							set i = i + 1
 						endif
 					endif
@@ -456,7 +456,7 @@ function TowerRushJob takes nothing returns nothing
 				loop
 					exitwhen i > race_tower_peon
 					if builder[i] != null and UnitAlive(builder[i]) then
-						call IssuePointOrderLoc(builder[i], "move", home_location)
+						call DebugHeroIssuePointOrderLoc(builder[i], "move", home_location, "Jobs/TOWER_RUSH.eai:TowerRushJob:459")
 						call RecycleGuardPositionAM(builder[i])
 					endif
 					set builder[i] = null
@@ -672,17 +672,17 @@ function TowerRushJob takes nothing returns nothing
 			if builder[i] == null or not UnitAlive(builder[i]) then
 				set builder[i] = FirstOfGroup(tempg)
 				if i > 43 then
-					call RemoveGuardPosition(builder[i])
+					call DebugHeroRemoveGuardPosition(builder[i], "Jobs/TOWER_RUSH.eai:TowerRushJob:675")
 					call GroupAddUnit(tower_rush_power,builder[i])
 					call GroupAddUnit(goldgrp, builder[i])
 					if GetUnitCurrentOrder(builder[i]) != OrderId("harvest") and GetUnitCurrentOrder(builder[i]) != OrderId("resumeharvesting") then
-						call IssueImmediateOrder(builder[i], "autoharvestgold")
+						call DebugHeroIssueImmediateOrder(builder[i], "autoharvestgold", "Jobs/TOWER_RUSH.eai:TowerRushJob:679")
 					endif
 				endif
 			elseif i > 43 then
 				if GetUnitCurrentOrder(builder[i]) != OrderId("harvest") and GetUnitCurrentOrder(builder[i]) != OrderId("resumeharvesting") then
 					call CreateDebugTag("TRush: harvest gold peon", 10, u, 4.00, 2.00)
-					call IssueImmediateOrder(builder[i], "autoharvestgold")
+					call DebugHeroIssueImmediateOrder(builder[i], "autoharvestgold", "Jobs/TOWER_RUSH.eai:TowerRushJob:685")
 				endif
 			endif
 			call GroupRemoveUnit(tempg,builder[i])
@@ -701,9 +701,9 @@ function TowerRushJob takes nothing returns nothing
 			if not IsUnitInGroup(u, tower_rush_power) and not IsUnitInGroup(u, goldgrp) then
 				if  GetUnitCurrentOrder(u) != OrderId("harvest") and GetUnitCurrentOrder(u) != OrderId("resumeharvesting") then
 					call CreateDebugTag("TRush: harvest lumber peon", 10, u, 4.00, 2.00)
-					call RemoveGuardPosition(u)
+					call DebugHeroRemoveGuardPosition(u, "Jobs/TOWER_RUSH.eai:TowerRushJob:704")
 					call GroupAddUnit(tower_rush_power,u)
-					call IssueImmediateOrder(u, "autoharvestlumber")
+					call DebugHeroIssueImmediateOrder(u, "autoharvestlumber", "Jobs/TOWER_RUSH.eai:TowerRushJob:706")
 				endif
 			endif
 			call GroupRemoveUnit(tempg,u)
@@ -729,7 +729,7 @@ function TowerRushJob takes nothing returns nothing
 			set g = SelectByAlive(g, true)
 			loop
 				exitwhen i > race_tower_peon
-				call RemoveGuardPosition(builder[i])
+				call DebugHeroRemoveGuardPosition(builder[i], "Jobs/TOWER_RUSH.eai:TowerRushJob:732")
 				call DestroyGroup(tempg)
 				set tempg = CopyGroup(g)
 				loop

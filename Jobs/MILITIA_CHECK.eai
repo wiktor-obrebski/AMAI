@@ -57,7 +57,7 @@ function MilitiaCheckJob takes nothing returns nothing
       set u = FirstOfGroup(g)
       exitwhen u == null
       if not militia_allowed or DistanceBetweenPoints_dk(GetUnitLoc(u), home_location) > race_militia_max_distance then
-        call IssueImmediateOrder(u, "militiaoff")
+        call DebugHeroIssueImmediateOrder(u, "militiaoff", "Jobs/MILITIA_CHECK.eai:MilitiaCheckJob:60")
       endif
       call GroupRemoveUnit(g,u)
     endloop

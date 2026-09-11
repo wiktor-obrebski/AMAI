@@ -1,0 +1,78 @@
+// Map VM observer: never issues orders, changes selections, or evaluates AI decisions.
+// Own cache object/file: do not save an AI VM's AMAI_Trace/HeroTrace cache here.
+function AMAIHeroEventLog takes integer p, string s returns nothing
+  local string mission = "P" + I2S(p)
+  call StoreString(amai_hero_event_cache, mission, "L" + I2S(amai_hero_event_index[p]), "tms=" + I2S(R2I(TimerGetElapsed(amai_hero_event_clock) * 1000)) + " " + s)
+  set amai_hero_event_index[p] = amai_hero_event_index[p] + 1
+  call StoreInteger(amai_hero_event_cache, mission, "Count", amai_hero_event_index[p])
+  set amai_hero_event_dirty = true
+endfunction
+
+function AMAIHeroOrderEvent takes nothing returns nothing
+  local unit hero = GetTriggerUnit()
+  local widget target = null
+  local unit targetUnit = null
+  local integer targetPlayer = -1
+  local real x = 0
+  local real y = 0
+  local string kind = "immediate"
+  if not amai_hero_event_tracking or hero == null or not IsUnitType(hero, UNIT_TYPE_HERO) then
+    set hero = null
+    return
+  endif
+  if GetTriggerEventId() == EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER then
+    set kind = "point"
+    set x = GetOrderPointX()
+    set y = GetOrderPointY()
+  elseif GetTriggerEventId() == EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER then
+    set kind = "target"
+    set target = GetOrderTarget()
+    set targetUnit = GetOrderTargetUnit()
+    if target != null then
+      set x = GetWidgetX(target)
+      set y = GetWidgetY(target)
+    endif
+    if targetUnit != null then
+      set targetPlayer = GetPlayerId(GetOwningPlayer(targetUnit))
+    endif
+  endif
+  call AMAIHeroEventLog(GetPlayerId(GetOwningPlayer(hero)), "HERO ORDER EVENT: hero=" + I2S(GetHandleId(hero)) + " type=" + I2S(GetUnitTypeId(hero)) + " kind=" + kind + " order=" + I2S(GetIssuedOrderId()) + " target=" + I2S(GetHandleId(target)) + " targetType=" + I2S(GetUnitTypeId(targetUnit)) + " targetPlayer=" + I2S(targetPlayer) + " tx=" + I2S(R2I(x)) + " ty=" + I2S(R2I(y)) + " x=" + I2S(R2I(GetUnitX(hero))) + " y=" + I2S(R2I(GetUnitY(hero))) + " hp=" + I2S(R2I(GetUnitState(hero, UNIT_STATE_LIFE))))
+  set targetUnit = null
+  set target = null
+  set hero = null
+endfunction
+
+function AMAIHeroEventFlush takes nothing returns nothing
+  if amai_hero_event_dirty then
+    call SaveGameCache(amai_hero_event_cache)
+    set amai_hero_event_dirty = false
+  endif
+endfunction
+
+function InitAMAIHeroEvents takes nothing returns nothing
+  local integer p = 0
+  local timer flushTimer = null
+  if not amai_hero_event_tracking then
+    return
+  endif
+  set amai_hero_event_cache = InitGameCache("AMAI_HeroEvents.w3v")
+  set amai_hero_event_clock = CreateTimer()
+  call TimerStart(amai_hero_event_clock, 1000000, false, null)
+  set amai_hero_event_trigger = CreateTrigger()
+  loop
+    exitwhen p >= bj_MAX_PLAYERS
+    call FlushStoredMission(amai_hero_event_cache, "P" + I2S(p))
+    set amai_hero_event_index[p] = 0
+    if GetPlayerController(Player(p)) == MAP_CONTROL_COMPUTER then
+      call TriggerRegisterPlayerUnitEvent(amai_hero_event_trigger, Player(p), EVENT_PLAYER_UNIT_ISSUED_ORDER, null)
+      call TriggerRegisterPlayerUnitEvent(amai_hero_event_trigger, Player(p), EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER, null)
+      call TriggerRegisterPlayerUnitEvent(amai_hero_event_trigger, Player(p), EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, null)
+      call AMAIHeroEventLog(p, "HERO EVENT OBSERVER START: version=1 clock=map observer=issued-orders source=unknown")
+    endif
+    set p = p + 1
+  endloop
+  call TriggerAddAction(amai_hero_event_trigger, function AMAIHeroOrderEvent)
+  set flushTimer = CreateTimer()
+  call TimerStart(flushTimer, 5, true, function AMAIHeroEventFlush)
+  set flushTimer = null
+endfunction

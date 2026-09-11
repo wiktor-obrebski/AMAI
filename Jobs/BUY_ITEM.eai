@@ -103,7 +103,7 @@ local integer detectedenemies = GetLocationNonCreepStrength(GetUnitX(shop_sent),
 		call CreateDebugTag("BUY_ITEM:in attack so dont get item", 10, shop_sent, 3.00, 1.50) 
       call RecycleGuardPositionAM(shop_sent)
 		call GroupRemoveUnit(unit_buying_item, shop_sent)
-		call AddAssault(1, GetUnitTypeId(shop_sent))
+		call DebugHeroAddAssault(1, GetUnitTypeId(shop_sent), "Jobs/BUY_ITEM.eai:BuyItemJob:106")
     	set shop_sent = null
     	set shop_ordered = false
     	set shop_buy_time_large = -1
@@ -116,9 +116,9 @@ local integer detectedenemies = GetLocationNonCreepStrength(GetUnitX(shop_sent),
 	set l = GetUnitLoc(shop_sent)
 	if DistanceBetweenPoints(l, home_location) >= 1100 then
 		call CreateDebugTag("BUY_ITEM: Retreat to Home", 10, shop_sent, 3.00, 1.50)	
-		call RemoveGuardPosition(shop_sent)
+		call DebugHeroRemoveGuardPosition(shop_sent, "Jobs/BUY_ITEM.eai:BuyItemJob:119")
 		if GetUnitCurrentOrder(shop_sent) == OrderId("stop") or GetUnitCurrentOrder(shop_sent) != OrderId("move") then
-			call IssuePointOrder(shop_sent, "move", GetLocationX(home_location), GetLocationY(home_location))
+			call DebugHeroIssuePointOrder(shop_sent, "move", GetLocationX(home_location), GetLocationY(home_location), "Jobs/BUY_ITEM.eai:BuyItemJob:121")
 		endif
 		call TQAddJob(5, BUY_ITEM, id)
 	else
@@ -156,7 +156,7 @@ local integer detectedenemies = GetLocationNonCreepStrength(GetUnitX(shop_sent),
     call RecycleGuardPositionAM(shop_sent)
 	call GroupRemoveUnit(unit_buying_item, shop_sent)
 	call CreateDebugTag("BUT_ITEM: Items have been brought", 10, shop_sent, 3.00, 1.50) 
-	call AddAssault(1, GetUnitTypeId(shop_sent))
+	call DebugHeroAddAssault(1, GetUnitTypeId(shop_sent), "Jobs/BUY_ITEM.eai:BuyItemJob:159")
     set shop_sent = null
     set shop_ordered = false
     set shop_buy_time_large = -1
@@ -168,16 +168,16 @@ local integer detectedenemies = GetLocationNonCreepStrength(GetUnitX(shop_sent),
   if shop_buy_time_large < 0 then
     set shop_buy_time_large = current_time
   endif
-  call RemoveGuardPosition(shop_sent)
+  call DebugHeroRemoveGuardPosition(shop_sent, "Jobs/BUY_ITEM.eai:BuyItemJob:171")
   if dist < buy_distance then
   		call CreateDebugTag("buy item", 10, shop_sent, 3.00, 1.50) 
 		if GetSlotsFreeOnUnit(shop_sent) <= 0 and healing then
 			call DropNonHealingItem(shop_sent)
 		elseif GetUnitCurrentOrder(shop_sent) == OrderId("move") then 
-		    call IssueImmediateOrder(shop_sent, "holdposition")
+		    call DebugHeroIssueImmediateOrder(shop_sent, "holdposition", "Jobs/BUY_ITEM.eai:BuyItemJob:177")
 		endif
 	if GetUnitTypeId(shop_unit) == old_id[racial_shop] then
-		call IssueTargetOrderById(shop_unit, 'Aall', shop_sent)  // Change shop target to this hero
+		call DebugHeroIssueTargetOrderById(shop_unit, 'Aall', shop_sent, "Jobs/BUY_ITEM.eai:BuyItemJob:180")  // Change shop target to this hero
 	endif
     call IssueNeutralImmediateOrderById(ai_player, shop_unit, old_id[id])
     if shop_buy_time_small < 0 then
@@ -187,14 +187,14 @@ local integer detectedenemies = GetLocationNonCreepStrength(GetUnitX(shop_sent),
   else
     call CreateDebugTag("move to item shop", 10, shop_sent, 3.00, 1.50) 
     if GetUnitCurrentOrder(shop_sent) != OrderId("move") or GetUnitCurrentOrder(shop_sent) == OrderId("stop") then
-      call IssuePointOrder(shop_sent, "move", GetUnitX(shop_unit), GetUnitY(shop_unit))
+      call DebugHeroIssuePointOrder(shop_sent, "move", GetUnitX(shop_unit), GetUnitY(shop_unit), "Jobs/BUY_ITEM.eai:BuyItemJob:190")
     endif
     set time_next_try = 4
   endif
   
   // Enemies are present so get home before they harm us
   if detectedenemies >= GetUnitStrength(shop_sent) and GetUnitTypeId(shop_unit) != old_id[racial_shop] then
-    call IssuePointOrder(shop_sent, "move", GetLocationX(home_location), GetLocationY(home_location))
+    call DebugHeroIssuePointOrder(shop_sent, "move", GetLocationX(home_location), GetLocationY(home_location), "Jobs/BUY_ITEM.eai:BuyItemJob:197")
       //call TQAddUnitJob(GetTimeToReachLoc(shop_sent, home_location), RESET_GUARD_POSITION, 1, shop_sent)
     set retreat_home = true
     call CreateDebugTag("BUY_ITEM: Enemies present so dont get item this time", 10, shop_sent, 3.00, 1.50) 

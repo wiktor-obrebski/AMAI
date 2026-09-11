@@ -41,8 +41,8 @@ function BuyNeutral takes integer id returns nothing
     set l = GetUnitLoc(neutral_sent[nn])
     if DistanceBetweenPoints(l, home_location) >= 1100 then
       call CreateDebugTag("BUY_ITEM: Retreat to Home", 10, neutral_sent[nn], 3.00, 1.50)	
-      call RemoveGuardPosition(neutral_sent[nn])
-      call IssuePointOrder(neutral_sent[nn], "move", GetLocationX(home_location), GetLocationY(home_location))
+      call DebugHeroRemoveGuardPosition(neutral_sent[nn], "Jobs/BUY_NEUTRAL.eai:BuyNeutral:44")
+      call DebugHeroIssuePointOrder(neutral_sent[nn], "move", GetLocationX(home_location), GetLocationY(home_location), "Jobs/BUY_NEUTRAL.eai:BuyNeutral:45")
       call TQAddJob(5, BUY_NEUTRAL, id)
     else
       call GroupRemoveUnit(unit_buying_merc, neutral_sent[nn])
@@ -84,7 +84,7 @@ function BuyNeutral takes integer id returns nothing
   if place_guarded and daytime >= 5 and daytime < 18 then
     set time_next_try = (18 - daytime)*20
   else
-    call RemoveGuardPosition(neutral_sent[nn])
+    call DebugHeroRemoveGuardPosition(neutral_sent[nn], "Jobs/BUY_NEUTRAL.eai:BuyNeutral:87")
     //call SetUnitUserData(neutral_sent[nn], UNIT_BUYING)
     if buy_time_large[nn] < 0 then
       set buy_time_large[nn] = current_time
@@ -94,7 +94,7 @@ function BuyNeutral takes integer id returns nothing
     if dist < buy_distance then
       call CreateDebugTag("buy unit", 10, neutral_sent[nn], 3.00, 1.50) 
       if GetUnitCurrentOrder(neutral_sent[nn]) == OrderId("move") then
-        call IssueImmediateOrder(neutral_sent[nn], "holdposition")
+        call DebugHeroIssueImmediateOrder(neutral_sent[nn], "holdposition", "Jobs/BUY_NEUTRAL.eai:BuyNeutral:97")
       endif
       call IssueNeutralImmediateOrderById(ai_player, buy_place, old_id[id])
       if buy_time_small[nn] < 0 then
@@ -103,14 +103,14 @@ function BuyNeutral takes integer id returns nothing
       set time_next_try = 0.5
     else
       call CreateDebugTag("move to merc camp", 10, neutral_sent[nn], 3.00, 1.50) 
-      call IssuePointOrder(neutral_sent[nn], "move", GetUnitX(buy_place), GetUnitY(buy_place))
+      call DebugHeroIssuePointOrder(neutral_sent[nn], "move", GetUnitX(buy_place), GetUnitY(buy_place), "Jobs/BUY_NEUTRAL.eai:BuyNeutral:106")
       set time_next_try = 4
     endif
   endif
   // Enemies are present so get home before they harm us
   if detectedenemies >= GetUnitStrength(neutral_sent[nn]) then
-    call RemoveGuardPosition(neutral_sent[nn])
-    call IssuePointOrder(neutral_sent[nn], "move", GetLocationX(home_location), GetLocationY(home_location))
+    call DebugHeroRemoveGuardPosition(neutral_sent[nn], "Jobs/BUY_NEUTRAL.eai:BuyNeutral:112")
+    call DebugHeroIssuePointOrder(neutral_sent[nn], "move", GetLocationX(home_location), GetLocationY(home_location), "Jobs/BUY_NEUTRAL.eai:BuyNeutral:113")
     //call TQAddUnitJob(GetTimeToReachLoc(neutral_sent[nn], home_location), RESET_GUARD_POSITION, 1, neutral_sent[nn])
     set retreat_home_n = true
     call TQAddJob(1, BUY_NEUTRAL, id)

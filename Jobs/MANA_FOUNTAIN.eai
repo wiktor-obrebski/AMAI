@@ -36,7 +36,7 @@ local boolean creepsawake = false
   // if fountain == null then
   //   set fountain = nearest_neutral[NEUTRAL_MANA_FOUNTAIN]
   // endif
-  call RemoveGuardPosition(u)
+  call DebugHeroRemoveGuardPosition(u, "Jobs/MANA_FOUNTAIN.eai:ManaFountainJob:39")
   if GetUnitState(u, UNIT_STATE_LIFE) <= 0 then
     call TQAddUnitJob(2, RESET_GUARD_POSITION, p, u)
     set fountain = null
@@ -53,23 +53,23 @@ local boolean creepsawake = false
   set unitstrengt = GetUnitStrength(u)
   set distance = DistanceBetweenUnits(u, fountain)
   if (distance <= 600 and (detectedenemies >= unitstrengt or creepsawake)) or (difficulty == HARD and (enemiesatfountain >= unitstrengt or creepsawake)) then
-    call IssuePointOrder(u, "move", GetLocationX(home_location), GetLocationY(home_location))
+    call DebugHeroIssuePointOrder(u, "move", GetLocationX(home_location), GetLocationY(home_location), "Jobs/MANA_FOUNTAIN.eai:ManaFountainJob:56")
     call TQAddUnitJob(8, RESET_GUARD_POSITION, p, u)
   elseif GetUnitState(u, UNIT_STATE_MANA) >= GetUnitState(u, UNIT_STATE_MAX_MANA) * (I2R(p)/100) then
     call TQAddUnitJob(2, RESET_GUARD_POSITION, p, u)
   else
     if distance >= buy_distance then
       if GetUnitAbilityLevel(u, 'AIhm') > 0 or (GetUnitAbilityLevel(u, 'Ashm') > 0 and GetLocationNonCreepStrength(GetUnitX(u), GetUnitY(u), 800) > 0 and (GetFloatGameState(GAME_STATE_TIME_OF_DAY) >= 18 or GetFloatGameState(GAME_STATE_TIME_OF_DAY) <= 6)) then
-        call IssueImmediateOrder(u, "ambush")
+        call DebugHeroIssueImmediateOrder(u, "ambush", "Jobs/MANA_FOUNTAIN.eai:ManaFountainJob:63")
       elseif GetUnitCurrentOrder(u) != OrderId("move") then
-        call IssuePointOrder(u, "move", x, y)
+        call DebugHeroIssuePointOrder(u, "move", x, y, "Jobs/MANA_FOUNTAIN.eai:ManaFountainJob:65")
       endif
     else
       if IsUnitInvisible(u, Player(PLAYER_NEUTRAL_AGGRESSIVE)) then  //no need do anything
       elseif GetUnitAbilityLevel(u, 'AIhm') > 0 or (GetUnitAbilityLevel(u, 'Ashm') > 0 and (GetFloatGameState(GAME_STATE_TIME_OF_DAY) >= 18 or GetFloatGameState(GAME_STATE_TIME_OF_DAY) <= 6)) then
-        call IssueImmediateOrder(u, "ambush")
+        call DebugHeroIssueImmediateOrder(u, "ambush", "Jobs/MANA_FOUNTAIN.eai:ManaFountainJob:70")
       elseif not IsUnitType(u, UNIT_TYPE_FLYING) and GetUnitCurrentOrder(u) != OrderId("patrol") then
-        call IssuePointOrder( u, "patrol", x + GetRandomReal(-100,100), y + GetRandomReal(-100,100))  //Prevent units from being blocked by other units coming from behind when leaving
+        call DebugHeroIssuePointOrder( u, "patrol", x + GetRandomReal(-100,100), y + GetRandomReal(-100,100), "Jobs/MANA_FOUNTAIN.eai:ManaFountainJob:72")  //Prevent units from being blocked by other units coming from behind when leaving
       endif
     endif
     call TQAddUnitJob(8, MANA_FOUNTAIN, p, u)

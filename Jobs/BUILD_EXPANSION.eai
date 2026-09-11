@@ -16,7 +16,7 @@ function BuildExpansionJob takes unit u, unit expansion returns nothing
     return
   endif
   if expansion == null then
-    call IssueImmediateOrder(u, "stop")
+    call DebugHeroIssueImmediateOrder(u, "stop", "Jobs/BUILD_EXPANSION.eai:BuildExpansionJob:19")
     return
   endif
   set d = DistanceBetweenUnits(u, expansion)
@@ -28,7 +28,7 @@ function BuildExpansionJob takes unit u, unit expansion returns nothing
     if peon_threat > 0 then
       // Enemy near the worker: send it home to avoid death
       call CreateDebugTag("BuildExpansion: Enemy near peon", 10, u, 3.00, 1.50)
-      call IssueImmediateOrder(u, "stop")
+      call DebugHeroIssueImmediateOrder(u, "stop", "Jobs/BUILD_EXPANSION.eai:BuildExpansionJob:31")
       call TQAddUnit2Job(10, BUILD_EXPANSION, 0, u, expansion)
       return
     endif
@@ -39,7 +39,7 @@ function BuildExpansionJob takes unit u, unit expansion returns nothing
         // Enemy at the expansion location
           // On HARD difficulty we pause and retry later (map-hack behaviour)
           call CreateDebugTagLoc("BuildExpansion: Enemy at expansion", 10, GetUnitX(expansion), GetUnitY(expansion), 3.00, 1.50)
-          call IssueImmediateOrder(u, "stop")
+          call DebugHeroIssueImmediateOrder(u, "stop", "Jobs/BUILD_EXPANSION.eai:BuildExpansionJob:42")
           // Re-queue the build job with a short delay to wait for danger to pass
           call TQAddUnit2Job(10, BUILD_EXPANSION, 0, u, expansion)
           return
@@ -52,14 +52,14 @@ function BuildExpansionJob takes unit u, unit expansion returns nothing
       call Trace("Double expansion check triggered: ally=" + B2S(double_expansion_ally_present) + " enemy=" + B2S(double_expansion_enemy_present) + " own=" + B2S(double_own_present))
       if double_expansion_ally_present then
         //call Trace("Cancelling Expansion - ally expansion detected")
-        call IssueImmediateOrder(u, "stop")
+        call DebugHeroIssueImmediateOrder(u, "stop", "Jobs/BUILD_EXPANSION.eai:BuildExpansionJob:55")
         set current_expansion = null
         return
       endif
       if double_expansion_enemy_present then
         if d > (190 * 30) then // movement speed of peasant * seconds away. If way too far give up as enemy will be built first.
           //call Trace("Cancelling Expansion - Enemy double expansion detected")
-          call IssueImmediateOrder(u, "stop")
+          call DebugHeroIssueImmediateOrder(u, "stop", "Jobs/BUILD_EXPANSION.eai:BuildExpansionJob:62")
           set current_expansion = null
           return
         endif
@@ -76,7 +76,7 @@ function BuildExpansionJob takes unit u, unit expansion returns nothing
       set y = GetUnitY(v)
       call RemoveUnit(v)
       if DistanceBetweenPoints_dd(Location(x,y), GetUnitLoc(expansion)) <= race_max_expa_mine_distance then
-        call IssuePointOrderById(u, old_id[racial_expansion], x, y)
+        call DebugHeroIssuePointOrderById(u, old_id[racial_expansion], x, y, "Jobs/BUILD_EXPANSION.eai:BuildExpansionJob:79")
         call CreateDebugTagLoc("Expand Fix JOB", 10, x, y, 5.00, 1.50)
         call TQAddUnit2Job(2, BUILD_EXPANSION, 0, u, expansion)
         //call Trace("Build Expansion JOB Retry Threat")

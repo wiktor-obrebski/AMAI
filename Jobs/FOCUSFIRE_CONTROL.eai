@@ -48,9 +48,9 @@ function GroupMicroSystem takes group g, group meleeg, group focus_group returns
     if not IsRetreatOrderLocked(u) and melee != null and not IsUnitInGroup(u, focus_fire_group) and IsUnitFacingUnit(melee, u) and DistanceBetweenUnits(u, melee) < 200 and GetUnitMoveSpeed(melee) <= GetUnitMoveSpeed(u) and (not IsUnitType(u, UNIT_TYPE_FLYING) or (IsUnitType(u, UNIT_TYPE_FLYING) and IsUnitType(melee, UNIT_TYPE_ATTACKS_FLYING))) then // 220 is the smallest ranged unit in warcraft 3.
       set l = GetSubtractionLoc_kd(unitloc, GetUnitLoc(melee))
       set l = GetProjectedLoc_dd(unitloc, l, 800)
-      call RemoveGuardPosition(u)
+      call DebugHeroRemoveGuardPosition(u, "Jobs/FOCUSFIRE_CONTROL.eai:GroupMicroSystem:51")
       call CreateDebugTagLoc("FF: MICRO LOC", 10, GetLocationX(l), GetLocationY(l), 3.00, 1.50)  
-      call IssuePointOrderLoc(u, "move", l)
+      call DebugHeroIssuePointOrderLoc(u, "move", l, "Jobs/FOCUSFIRE_CONTROL.eai:GroupMicroSystem:53")
       call TQAddUnitJob(1.8, RESET_GUARD_POSITION_ONLY, 80, u)
       call GroupRemoveUnit(focus_group, u) // prevent focus fire controls interrupting
       call RemoveLocation(l)
@@ -79,12 +79,12 @@ function GroupOrderFocusWindInstant_d takes group g, unit target returns nothing
       endif
       if IsUnitInvisible(u, Player(PLAYER_NEUTRAL_AGGRESSIVE)) then // UnitInvis does not work
           call CreateDebugTag("FF: windwalk attack", 10, u, 1.00, 0.80)
-          call RemoveGuardPosition(u)
-          call IssueTargetOrder(u, "attack", target)
+          call DebugHeroRemoveGuardPosition(u, "Jobs/FOCUSFIRE_CONTROL.eai:GroupOrderFocusWindInstant_d:82")
+          call DebugHeroIssueTargetOrder(u, "attack", target, "Jobs/FOCUSFIRE_CONTROL.eai:GroupOrderFocusWindInstant_d:83")
           call TQAddUnitJob(1.8, RESET_WINDWALKER, 0, u) // Needs to happen before the next focus fire iteration
       elseif not IsUnitType(target,UNIT_TYPE_STRUCTURE) then
         call CreateDebugTag("FF: windwalk", 10, u, 1.00, 0.80)
-        call IssueImmediateOrder(u, "windwalk")
+        call DebugHeroIssueImmediateOrder(u, "windwalk", "Jobs/FOCUSFIRE_CONTROL.eai:GroupOrderFocusWindInstant_d:87")
       endif
     endif
     call GroupRemoveUnit(ug, u)
@@ -331,7 +331,7 @@ function FocusFireJob takes nothing returns nothing
       if IsUnitVisible(u, Player(PLAYER_NEUTRAL_AGGRESSIVE)) and IsStandardUnit(u) then
         call RecycleGuardPositionAM(u)
         if attack_running and not isfleeing then
-            call AddAssault(1, GetUnitTypeId(u))
+            call DebugHeroAddAssault(1, GetUnitTypeId(u), "Jobs/FOCUSFIRE_CONTROL.eai:FocusFireJob:334")
         endif
       endif
       call GroupRemoveUnit(windwalk_group, u)

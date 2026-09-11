@@ -29,12 +29,12 @@ function HeadtoMoonWell takes unit u, integer p returns nothing
     set dist = DistanceBetweenUnits(u, nearest_moon_well)
     set enemystrength = GetLocationNonCreepStrength(GetUnitX(u), GetUnitY(u), 800)
     if dist >= 1000 and enemystrength > 0 and ((GetUnitState(u, UNIT_STATE_MANA) > 50 and GetUnitAbilityLevel(u, 'AEbl') >= 1) or (GetUnitState(u, UNIT_STATE_MANA) > 10 and GetUnitAbilityLevel(u, 'AEbl') > 1)) then
-        call IssuePointOrder(u, "blink", GetUnitX(nearest_moon_well), GetUnitY(nearest_moon_well))
-        call IssuePointOrder(u, "smart", GetUnitX(nearest_moon_well), GetUnitY(nearest_moon_well))
+        call DebugHeroIssuePointOrder(u, "blink", GetUnitX(nearest_moon_well), GetUnitY(nearest_moon_well), "Jobs/MOON_WELL_CONTROL.eai:HeadtoMoonWell:32")
+        call DebugHeroIssuePointOrder(u, "smart", GetUnitX(nearest_moon_well), GetUnitY(nearest_moon_well), "Jobs/MOON_WELL_CONTROL.eai:HeadtoMoonWell:33")
     elseif dist >= 1000 and GetUnitAbilityLevel(u, 'Ashm') > 0 and enemystrength > 0 and (GetFloatGameState(GAME_STATE_TIME_OF_DAY) >= 18 or GetFloatGameState(GAME_STATE_TIME_OF_DAY) < 6) and not IsUnitType(u, UNIT_TYPE_HERO) then
-        call IssueImmediateOrder(u, "ambush")
+        call DebugHeroIssueImmediateOrder(u, "ambush", "Jobs/MOON_WELL_CONTROL.eai:HeadtoMoonWell:35")
     else
-      call IssuePointOrder(u, "smart", GetUnitX(nearest_moon_well), GetUnitY(nearest_moon_well))
+      call DebugHeroIssuePointOrder(u, "smart", GetUnitX(nearest_moon_well), GetUnitY(nearest_moon_well), "Jobs/MOON_WELL_CONTROL.eai:HeadtoMoonWell:37")
     endif
     call TQAddUnitJob(4, MOON_WELL_CONTROL, p, u)
 endfunction
@@ -59,14 +59,14 @@ function MoonWellJob takes unit u, integer p returns nothing
         set dist = DistanceBetweenPoints_dk(GetUnitLoc(u), home_location)
         set enemystrength = GetLocationNonCreepStrength(GetUnitX(u), GetUnitY(u), 800)
         if dist >= 1000 and enemystrength > 0 and ((GetUnitState(u, UNIT_STATE_MANA) > 50 and GetUnitAbilityLevel(u, 'AEbl') == 1) or (GetUnitState(u, UNIT_STATE_MANA) > 10 and GetUnitAbilityLevel(u, 'AEbl') > 1)) then
-            call IssuePointOrder(u, "blink", GetLocationX(home_location), GetLocationY(home_location))
-            call IssuePointOrder(u, "move", GetLocationX(home_location), GetLocationY(home_location))
+            call DebugHeroIssuePointOrder(u, "blink", GetLocationX(home_location), GetLocationY(home_location), "Jobs/MOON_WELL_CONTROL.eai:MoonWellJob:62")
+            call DebugHeroIssuePointOrder(u, "move", GetLocationX(home_location), GetLocationY(home_location), "Jobs/MOON_WELL_CONTROL.eai:MoonWellJob:63")
             call TQAddUnitJob(2, SEND_HOME, 0, u)  // 0 is home_location
         elseif dist >= 1000 and enemystrength > 0 and GetUnitAbilityLevel(u, 'Ashm') > 0 and (GetFloatGameState(GAME_STATE_TIME_OF_DAY) >= 18 or GetFloatGameState(GAME_STATE_TIME_OF_DAY) < 6) and not IsUnitType(u, UNIT_TYPE_HERO) then
-            call IssueImmediateOrder(u, "ambush")
+            call DebugHeroIssueImmediateOrder(u, "ambush", "Jobs/MOON_WELL_CONTROL.eai:MoonWellJob:66")
             call TQAddUnitJob(4, MOON_WELL_CONTROL, p, u)
         elseif dist >= 1000 then
-            call IssuePointOrder(u, "move", GetLocationX(home_location), GetLocationY(home_location))
+            call DebugHeroIssuePointOrder(u, "move", GetLocationX(home_location), GetLocationY(home_location), "Jobs/MOON_WELL_CONTROL.eai:MoonWellJob:69")
             call TQAddUnitJob(4, MOON_WELL_CONTROL, p, u)
         elseif IsUnitType(u,UNIT_TYPE_HERO)==true then
           call TQAddUnitJob(2, SEND_HOME, 0, u)  // 0 is home_location
