@@ -151,7 +151,8 @@ function SendUnitHomeJob takes unit u, integer p returns nothing
   elseif otherhero != null and IsUnitType(u, UNIT_TYPE_HERO) then
       if GetSlotsFreeOnUnit(u) > 0 then  // prevent create on the ground
         call UnitAddItem(u, GetItemOfTypeOnUnit(racial_healing_item, otherhero))
-        call TQAddUnitJob(2, RESET_GUARD_POSITION, 0, u)
+        // Receiving an item is not healing; retry to use it and check health.
+        call TQAddUnitJob(2, SEND_HOME, p, u)
       else
         call TQAddUnitJob(4, SEND_HOME, p, u)
       endif
@@ -169,7 +170,9 @@ function SendUnitHomeJob takes unit u, integer p returns nothing
         if GetUnitState(u, UNIT_STATE_MANA) < 100 and racial_mana_item != 0 and GetItemNumberOnUnit(racial_mana_item, u) <= 0 then
           call IssueNeutralImmediateOrderById(ai_player, nearshopunit, old_id[racial_mana_item])
         endif
-        call TQAddUnitJob(2, RESET_GUARD_POSITION, 0, u)  // end job
+        // A purchase can fail or supply an unused item. Keep healing ownership
+        // until the normal health check succeeds, including after item use.
+        call TQAddUnitJob(4, SEND_HOME, p, u)
       endif
   else
       if DistanceBetweenPoints_dk(GetUnitLoc(u), GetRecoveryHome()) >= 1200 then
