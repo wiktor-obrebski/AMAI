@@ -5,6 +5,9 @@
     real creep_battle_radius = 750  // same as with normal_battle_radius, but for battles against creeps
     boolean retreat_controlled = false
     location home_location = null
+    location recovery_home = null // Independent of tactical captain home; owned, stable location.
+    unit recovery_anchor = null
+    real recovery_next_check = 0
     real enemy_strength_sum = 0
     real ally_strength_sum = 0
     boolean canflee = false
@@ -70,7 +73,7 @@ function DebugStartRetreatTransitTracking takes nothing returns nothing
       call GroupAddUnit(debug_retreat_start_units, u)
       set ul = GetUnitLoc(u)
       set dist_fight = DistanceBetweenPoints(ul, debug_retreat_origin)
-      set dist_home = DistanceBetweenPoints(ul, captain_home)
+      set dist_home = DistanceBetweenPoints(ul, GetRecoveryHome())
 
       if dist_fight >= 1000 then
         call GroupAddUnit(debug_retreat_transit_group, u)
@@ -106,7 +109,7 @@ function DebugTraceRetreatTransitState takes string phase returns nothing
 
     if UnitAlive(u) then
       set ul = GetUnitLoc(u)
-      call TraceAll("DBG RETREAT TRANSIT: rid=" + Int2Str(debug_retreat_transit_id) + " phase=" + phase + " id=" + Int2Str(GetHandleId(u)) + " distFight=" + Int2Str(R2I(DistanceBetweenPoints(ul, debug_retreat_origin))) + " distHome=" + Int2Str(R2I(DistanceBetweenPoints(ul, captain_home))) + " order=" + Int2Str(GetUnitCurrentOrder(u)) + " army=" + Int2Str(GetArmyOfUnit(u)) + " standard=" + B2S(IsStandardUnit(u)) + " inRetreat=" + B2S(IsUnitInGroup(u, in_retreat_group)) + " reset=" + B2S(IsUnitInGroup(u, retreat_reset_pending)))
+      call TraceAll("DBG RETREAT TRANSIT: rid=" + Int2Str(debug_retreat_transit_id) + " phase=" + phase + " id=" + Int2Str(GetHandleId(u)) + " distFight=" + Int2Str(R2I(DistanceBetweenPoints(ul, debug_retreat_origin))) + " distHome=" + Int2Str(R2I(DistanceBetweenPoints(ul, GetRecoveryHome()))) + " order=" + Int2Str(GetUnitCurrentOrder(u)) + " army=" + Int2Str(GetArmyOfUnit(u)) + " standard=" + B2S(IsStandardUnit(u)) + " inRetreat=" + B2S(IsUnitInGroup(u, in_retreat_group)) + " reset=" + B2S(IsUnitInGroup(u, retreat_reset_pending)))
       call RemoveLocation(ul)
       set ul = null
     else
@@ -231,6 +234,7 @@ function RetreatControlJob takes nothing returns nothing
 if not retreat_controlled then
   return
 endif
+call UpdateRecoveryHome()
 
 if not isfleeing and canflee and (CaptainRetreating() or (CaptainIsHome() and not main_hero_home_tp_retreat_pending)) then
   if ordinary_creep_attack_running then
@@ -293,7 +297,7 @@ if isfleeing or (town_threatened and town_threat_break) then
       set u = FirstOfGroup(g)
       exitwhen u == null
       // Keep counting retreat-owned travellers; only capture new standard combat units.
-      if (IsUnitInGroup(u, in_retreat_group) or IsStandardUnit(u)) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) and DistanceBetweenPoints(GetUnitLoc(u), captain_home) >= 650 then
+      if (IsUnitInGroup(u, in_retreat_group) or IsStandardUnit(u)) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) then
         if GetUnitCurrentOrder(u) != OrderId("harvest") then
           if not IsUnitInGroup(u, retreat_reset_pending) then
             if not IsUnitInGroup(u, in_retreat_group) then
@@ -302,7 +306,11 @@ if isfleeing or (town_threatened and town_threat_break) then
               call TQAddUnitJob(0, SEND_HOME, 1, u)
             endif
 
-            set num_units = num_units + 1
+            // Units already at recovery must also leave native guard control.
+            // Count only travellers so a TP landing cannot prolong retreat.
+            if DistanceBetweenPoints(GetUnitLoc(u), GetRecoveryHome()) >= 650 then
+              set num_units = num_units + 1
+            endif
           endif
         endif
       endif

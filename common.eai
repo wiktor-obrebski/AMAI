@@ -5750,6 +5750,8 @@ function GetLocationNonCreepStrength takes real x, real y, real radius returns i
   return R2I(sum + 0.5)
 endfunction
 
+#INCLUDESCRIPT <RecoveryHome.eai>
+
 //============================================================================
 function GetLocationEnemyStrength takes real x, real y, real radius, boolean only_structures returns integer
   local group g = CreateGroup()

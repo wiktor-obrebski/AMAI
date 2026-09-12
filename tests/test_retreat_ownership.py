@@ -90,6 +90,7 @@ class RetreatOwnershipTests(unittest.TestCase):
             isfleeing=False, attack_running=True,
             IsRetreatTeleporting=lambda u: False, RetreatRecovery=lambda u: False,
             captain_home=0, GetUnitLoc=lambda u: 0,
+            GetRecoveryHome=lambda: 0, UpdateRecoveryHome=lambda: None,
             DistanceBetweenPoints_dk=lambda a, b: abs(a-b),
             GroupAddUnit=lambda g, u: g.add(u), SEND_HOME='send_home',
             UNIT_TYPE_PEON='peon', UNIT_TYPE_STRUCTURE='structure',

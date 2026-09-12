@@ -115,20 +115,23 @@ endfunction
 
 function TeleportHome takes integer hn returns nothing
   local integer i = 0
-  local real dx = GetLocationX(captain_home)
-  local real dy = GetLocationY(captain_home)
+  local location destination = null
+  local real dx = 0
+  local real dy = 0
   if teleporting then
     return
   endif
-  if not captain_tp then // can't teleport here so just go home
-    if home_town >= 0 and town_can_tp[home_town] then
-      set dx = GetLocationX(town_loc[home_town])
-      set dy = GetLocationY(town_loc[home_town])
-    else
-      set dx = GetLocationX(home_location)
-      set dy = GetLocationY(home_location)
-    endif
-  endif  
+  call UpdateRecoveryHome()
+  set destination = GetRecoveryHome()
+  set dx = GetLocationX(destination)
+  set dy = GetLocationY(destination)
+  // Never fall back to the besieged defense destination for an emergency TP.
+  if not IsRecoveryAnchorValid(recovery_anchor) then
+    call TraceAll("DBG RECOVERY TP SKIP: reason=no-townhall")
+    set destination = null
+    return
+  endif
+  set destination = null
   call GoHomeIfMainHero(hero_unit[hn], dx, dy, true, "TeleportHome")
   call DebugHeroUnitUseItemPoint(hero_unit[hn], GetItemOfTypeOnUnit(tp_item, hero_unit[hn]), dx + GetRandomInt(300,500) * ISign(), dy + GetRandomInt(300,500) * ISign(), "Jobs/MICRO_HERO.eai:TeleportHome:133")
   set teleporting = true
@@ -301,7 +304,7 @@ function RescueRetreatHero takes integer hn returns nothing
     return
   endif
   if GetUnitState(u, UNIT_STATE_LIFE) < RMax(flee_health_percentage * GetUnitState(u, UNIT_STATE_MAX_LIFE), flee_minimum_health) then
-    if not TryRetreatHealingItem(u, false) and GetItemNumberOnUnit(tp_item, u) > 0 and DistanceBetweenPoints_dk(GetUnitLoc(u), captain_home) > 2000 and GetLocationNonCreepStrength(GetUnitX(u), GetUnitY(u), 800) > 0 then
+    if not TryRetreatHealingItem(u, false) and GetItemNumberOnUnit(tp_item, u) > 0 and DistanceBetweenPoints_dk(GetUnitLoc(u), GetRecoveryHome()) > 2000 and GetLocationNonCreepStrength(GetUnitX(u), GetUnitY(u), 800) > 0 then
       call TeleportHome(hn)
     endif
   endif

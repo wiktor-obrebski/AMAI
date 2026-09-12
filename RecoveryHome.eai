@@ -1,0 +1,87 @@
+// Recovery is anchored to an owned town hall, never an enemy/defense position.
+// This checks danger at the destination, not the safety of the route to it.
+function IsRecoveryAnchorValid takes unit anchor returns boolean
+  return anchor != null and UnitAlive(anchor) and GetOwningPlayer(anchor) == ai_player and IsUnitType(anchor, UNIT_TYPE_TOWNHALL) and IsUnitType(anchor, UNIT_TYPE_STRUCTURE)
+endfunction
+
+function UpdateRecoveryHome takes nothing returns nothing
+  local group candidates = null
+  local unit candidate = null
+  local unit recovery_choice = null
+  local integer danger = 0
+  local integer chosen_danger = 2147483647
+  local integer saved_air = air_strength
+  local real distance = 0
+  local real chosen_distance = 0
+  local real dx = 0
+  local real dy = 0
+  local real now = TimerGetElapsed(tq_timer)
+  local boolean had_anchor = IsRecoveryAnchorValid(recovery_anchor)
+  local string reason = "initial"
+
+  if recovery_home != null and now < recovery_next_check and (had_anchor or recovery_anchor == null) then
+    return
+  endif
+  set recovery_next_check = now + 2
+  if recovery_home == null then
+    set recovery_home = Location(GetLocationX(home_location), GetLocationY(home_location))
+  endif
+  if had_anchor then
+    set recovery_choice = recovery_anchor
+    set chosen_danger = GetLocationNonCreepStrength(GetUnitX(recovery_choice), GetUnitY(recovery_choice), 1500)
+    set reason = "less-danger"
+  elseif recovery_anchor != null then
+    set reason = "anchor-lost"
+  endif
+
+  // Keep an existing quiet base even if another town becomes more valuable.
+  // Search only if uninitialized, invalid, or exposed to enemy combat units.
+  if recovery_choice == null or chosen_danger > 0 then
+    set candidates = CreateGroup()
+    call GroupEnumUnitsOfPlayer(candidates, ai_player, null)
+    loop
+      set candidate = FirstOfGroup(candidates)
+      exitwhen candidate == null
+      if IsRecoveryAnchorValid(candidate) then
+        set danger = GetLocationNonCreepStrength(GetUnitX(candidate), GetUnitY(candidate), 1500)
+        set dx = GetUnitX(candidate) - GetLocationX(recovery_home)
+        set dy = GetUnitY(candidate) - GetLocationY(recovery_home)
+        set distance = dx * dx + dy * dy
+        // Equal danger never displaces a surviving anchor. When selecting a new
+        // anchor, break ties by distance from the previous recovery position.
+        if recovery_choice == null or danger < chosen_danger or (not had_anchor and danger == chosen_danger and distance < chosen_distance) then
+          set recovery_choice = candidate
+          set chosen_danger = danger
+          set chosen_distance = distance
+        endif
+      endif
+      call GroupRemoveUnit(candidates, candidate)
+    endloop
+    call DestroyGroup(candidates)
+  endif
+  set air_strength = saved_air
+
+  if recovery_choice != recovery_anchor then
+    if recovery_choice != null then
+      call MoveLocation(recovery_home, GetUnitX(recovery_choice), GetUnitY(recovery_choice))
+    else
+      // No surviving owned town hall: retain the last position for walking;
+      // TeleportHome must not attempt a TP to a nonexistent anchor.
+      set reason = "no-townhall"
+    endif
+    call TraceAll("DBG RECOVERY HOME: reason=" + reason + " oldAnchor=" + Int2Str(GetHandleId(recovery_anchor)) + " anchor=" + Int2Str(GetHandleId(recovery_choice)) + " x=" + Int2Str(R2I(GetLocationX(recovery_home))) + " y=" + Int2Str(R2I(GetLocationY(recovery_home))) + " enemy=" + Int2Str(chosen_danger) + " defenseX=" + Int2Str(R2I(GetLocationX(captain_home))) + " defenseY=" + Int2Str(R2I(GetLocationY(captain_home))))
+    set recovery_anchor = recovery_choice
+  elseif recovery_choice != null then
+    call MoveLocation(recovery_home, GetUnitX(recovery_choice), GetUnitY(recovery_choice))
+  endif
+  set candidates = null
+  set candidate = null
+  set recovery_choice = null
+endfunction
+
+function GetRecoveryHome takes nothing returns location
+  if recovery_home == null then
+    return home_location
+  endif
+  return recovery_home
+endfunction
