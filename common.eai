@@ -4162,7 +4162,7 @@ endfunction
 //==========================================================================
 // Retreat owns a unit until its own arrival/reset job releases it.
 function IsRetreatOrderLocked takes unit u returns boolean
-  return IsUnitInGroup(u, in_retreat_group) or IsUnitInGroup(u, retreat_reset_pending)
+  return IsUnitInGroup(u, in_retreat_group) or IsUnitInGroup(u, retreat_reset_pending) or IsUnitInGroup(u, hero_regroup)
 endfunction
 
 // Delayed cleanup from another subsystem must not restore native control.
@@ -4170,6 +4170,37 @@ function RecycleGuardPositionAM takes unit u returns nothing
   if not IsRetreatOrderLocked(u) then
     call DebugHeroRecycleGuardPosition(u, "common.eai:RecycleGuardPositionAM:4168")
   endif
+endfunction
+
+// AddAssault selects by type, so never submit a regroup-owned hero type.
+function AddAssaultAvailable takes integer count, integer id, string source returns nothing
+  local integer i = 1
+  loop
+    exitwhen i > 3
+    if IsUnitInGroup(hero_unit[i], hero_regroup) and GetUnitTypeId(hero_unit[i]) == id then
+      return
+    endif
+    set i = i + 1
+  endloop
+  call DebugHeroAddAssault(count, id, source)
+endfunction
+
+// Planning may use staged heroes; ordinary orders still cannot use them.
+function IsHeroStagedForFormation takes unit u returns boolean
+  local location l = recovery_home
+  if l == null then
+    set l = home_location
+  endif
+  if l == null or not UnitAlive(u) or not IsUnitInGroup(u, hero_regroup) or IsUnitInGroup(u, in_retreat_group) or IsUnitInGroup(u, retreat_reset_pending) then
+    set l = null
+    return false
+  endif
+  if not attack_running and not isfleeing and not canflee and not teleporting and not IsUnitLoaded(u) and not IsUnitHidden(u) and not town_threatened and not TownThreatened() and IsUnitInRangeLoc(u, l, 650) then
+    set l = null
+    return true
+  endif
+  set l = null
+  return false
 endfunction
 
 function IsStandardUnit takes unit u returns boolean
@@ -4392,7 +4423,7 @@ function GroupRecycleHarrassPositionInstant takes group g returns nothing
     exitwhen u == null
     if not IsRetreatOrderLocked(u) then
       call RecycleGuardPositionAM(u)
-      call DebugHeroAddAssault(1, GetUnitTypeId(u), "common.eai:GroupRecycleHarrassPositionInstant:4392")
+      call AddAssaultAvailable(1, GetUnitTypeId(u), "common.eai:GroupRecycleHarrassPositionInstant:4392")
     endif
     call GroupRemoveUnit(unit_harassing, u)
     call GroupRemoveUnit(g,u)
@@ -5318,7 +5349,7 @@ function GetMajorHero takes unit u returns unit
   local integer i = 1
   loop
     exitwhen i > 3
-    if hero_built[i] and UnitAlive(hero_unit[i]) and not IsRetreatOrderLocked(hero_unit[i]) and not IsUnitInGroup(hero_unit[i], unit_healing) then
+    if hero_built[i] and UnitAlive(hero_unit[i]) and (not IsRetreatOrderLocked(hero_unit[i]) or IsHeroStagedForFormation(hero_unit[i])) and not IsUnitInGroup(hero_unit[i], unit_healing) then
       return hero_unit[i]
     endif
     set i = i + 1
@@ -5883,7 +5914,7 @@ endfunction
 
 //============================================================================
 function IsRetreatUnavailableForAttack takes unit u returns boolean
-  return IsRetreatOrderLocked(u)
+  return IsRetreatOrderLocked(u) and not IsHeroStagedForFormation(u)
 endfunction
 
 function GetHeroBonusStrengthForUnit takes unit u returns integer
@@ -8106,6 +8137,8 @@ function IsRetreatTeleporting takes unit u returns boolean
   endif
   return false
 endfunction
+
+#INCLUDESCRIPT <HeroRegroup.eai>
 
 // Only self/area healing: never sacrifice another unit or move toward a shop.
 // The caller controls retry timing; continuous items are reserved for quiet recovery.
@@ -12651,7 +12684,7 @@ function AttackGroupAddUnknown takes nothing returns nothing
     exitwhen u == null
     set id = GetUnitTypeId(u)
     if (IsUnitType(u, UNIT_TYPE_ATTACKS_FLYING) or IsUnitType(u, UNIT_TYPE_ATTACKS_GROUND)) and id != 'ngir' then
-      call DebugHeroAddAssault(60,id, "common.eai:AttackGroupAddUnknown:12644")  //other hero and unit , like other race and custom
+      call AddAssaultAvailable(60,id, "common.eai:AttackGroupAddUnknown:12644")  //other hero and unit , like other race and custom
     endif
     call GroupRemoveUnit(g, u)
   endloop
@@ -12696,6 +12729,8 @@ function FormGroupAM takes integer seconds returns nothing
   if isfleeing or creep_captain_gather_running then
     return
   endif
+
+  call ReleaseStagedHeroes()
 
   call TraceAll("DBG FORM START: seconds=" + Int2Str(seconds) + " ready=" + Int2Str(GetOwnAttackStrength()) + " captain=" + Int2Str(CaptainGroupSize()) + " attackLength=" + Int2Str(attack_length))
 
@@ -12754,9 +12789,9 @@ function FormGroupAM takes integer seconds returns nothing
     call ConversionsAM(desire,unitid)
 
     if count >= desire then
-      call DebugHeroAddAssault(desire,old_id[unitid], "common.eai:FormGroupAM:12747")
+      call AddAssaultAvailable(desire,old_id[unitid], "common.eai:FormGroupAM:12747")
     else
-      call DebugHeroAddAssault(count,old_id[unitid], "common.eai:FormGroupAM:12749")
+      call AddAssaultAvailable(count,old_id[unitid], "common.eai:FormGroupAM:12749")
     endif
 
     set index = index + 1
@@ -12953,7 +12988,7 @@ function DesperationAssault takes nothing returns nothing
       set u = FirstOfGroup(g)
       exitwhen u == null
       if (IsUnitType(u, UNIT_TYPE_ANCIENT) or not IsUnitType(u, UNIT_TYPE_STRUCTURE)) and UnitAlive(u) and not IsUnitHidden(u) then
-        call DebugHeroAddAssault(60, GetUnitTypeId(u), "common.eai:DesperationAssault:12946")
+        call AddAssaultAvailable(60, GetUnitTypeId(u), "common.eai:DesperationAssault:12946")
       endif
       call GroupRemoveUnit(g, u )
     endloop

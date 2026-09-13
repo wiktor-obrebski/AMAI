@@ -89,6 +89,8 @@ class RetreatOwnershipTests(unittest.TestCase):
         self.env = dict(
             isfleeing=False, attack_running=True,
             IsRetreatTeleporting=lambda u: False, RetreatRecovery=lambda u: False,
+            hero_unit={1:None,2:None,3:None}, recovery_home=None, home_location=None,
+            RemoveGuardPosition=lambda u:None, IssueImmediateOrder=lambda *a:True,
             captain_home=0, GetUnitLoc=lambda u: 0,
             GetRecoveryHome=lambda: 0, UpdateRecoveryHome=lambda: None,
             DistanceBetweenPoints_dk=lambda a, b: abs(a-b),
@@ -106,12 +108,13 @@ class RetreatOwnershipTests(unittest.TestCase):
             AddAssault=lambda *a: self.assault.append(a),
             TQAddUnitJob=lambda *a: self.jobs.append(a),
         )
-        for g in ('in_retreat_group', 'retreat_reset_pending', 'unit_healing',
+        for g in ('hero_regroup', 'in_retreat_group', 'retreat_reset_pending', 'unit_healing',
                   'unit_rescueing', 'unit_harassing', 'unit_zepplin_move'):
             self.env[g] = set()
         for name in ('IsRetreatOrderLocked', 'RecycleGuardPositionAM', 'IsStandardUnit',
-                     'IsRetreatUnavailableForAttack'):
+                     'IsHeroStagedForFormation', 'IsRetreatUnavailableForAttack'):
             load_jass_function(self.env, 'common.eai', name)
+        load_jass_function(self.env, 'HeroRegroup.eai', 'ReturnUnitToArmy')
         for job, name in (
             ('RESET_GUARD_POSITION', 'ResetGuardPositionJob'),
             ('RESET_GUARD_POSITION_ONLY', 'ResetGuardPositionOnlyJob'),

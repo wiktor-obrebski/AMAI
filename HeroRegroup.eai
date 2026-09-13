@@ -1,0 +1,127 @@
+// Returning heroes retain explicit ownership until they join an assembled force.
+function ReturnUnitToArmy takes unit u returns nothing
+  if IsRetreatOrderLocked(u) then
+    return
+  endif
+  // Shopping may finish while a separate recovery job still owns the hero.
+  if IsUnitInGroup(u, unit_healing) or IsUnitInGroup(u, unit_rescueing) or IsUnitInGroup(u, unit_harassing) or IsUnitInGroup(u, unit_zepplin_move) then
+    return
+  endif
+  if UnitAlive(u) and (u == hero_unit[1] or u == hero_unit[2] or u == hero_unit[3]) then
+    call GroupAddUnit(hero_regroup, u)
+    if not IsRetreatTeleporting(u) then
+      call DebugHeroRemoveGuardPosition(u, "ReturnUnitToArmy")
+      call DebugHeroIssueImmediateOrder(u, "holdposition", "ReturnUnitToArmy")
+    endif
+    call TraceAll("DBG HERO REGROUP BEGIN: id=" + Int2Str(GetHandleId(u)))
+  else
+    call RecycleGuardPositionAM(u)
+  endif
+endfunction
+
+// Release is explicit: other guard resets remain blocked while regroup owns u.
+function ReleaseRegroupHero takes unit u returns nothing
+  call GroupRemoveUnit(hero_regroup, u)
+  call RecycleGuardPositionAM(u)
+  call TraceAll("DBG HERO REGROUP RELEASE: id=" + Int2Str(GetHandleId(u)))
+endfunction
+
+// Called immediately before InitAssault, without sleeping between releases.
+function ReleaseStagedHeroes takes nothing returns nothing
+  local integer i = 1
+  loop
+    exitwhen i > 3
+    if IsHeroStagedForFormation(hero_unit[i]) and not IsRetreatTeleporting(hero_unit[i]) then
+      call ReleaseRegroupHero(hero_unit[i])
+    endif
+    set i = i + 1
+  endloop
+endfunction
+
+// Validate actual ready troops, not the cached strength of travelling units.
+// For defense, require a visible enemy here, not merely a remote town threat.
+function CanHeroJoinGroup takes location l, boolean defense, integer requiredTroops returns boolean
+  local group g = CreateGroup()
+  local unit u = null
+  local integer troops = 0
+  local real own = 0
+  local real enemy = 0
+  call GroupEnumUnitsInRangeOfLoc(g, l, 750, null)
+  loop
+    set u = FirstOfGroup(g)
+    exitwhen u == null
+    if UnitAlive(u) and not IsUnitHidden(u) and not IsUnitLoaded(u) and not IsUnitType(u, UNIT_TYPE_PEON) and GetUnitState(u, UNIT_STATE_MAX_LIFE) > 0 then
+      if GetOwningPlayer(u) == ai_player and IsStandardUnit(u) and not IsUnitBuying(u) then
+        if not IsUnitType(u, UNIT_TYPE_STRUCTURE) then
+          set own = own + GetUnitStrength(u)
+          if not IsUnitType(u, UNIT_TYPE_HERO) and not IsUnitType(u, UNIT_TYPE_SUMMONED) then
+            set troops = troops + 1
+          endif
+        elseif IsUnitTower(u) then
+          set own = own + GetUnitStrength(u)
+        endif
+      elseif IsPlayerEnemy(ai_player, GetOwningPlayer(u)) and GetOwningPlayer(u) != Player(PLAYER_NEUTRAL_AGGRESSIVE) and IsUnitVisible(u, ai_player) and not IsUnitInvisible(u, ai_player) then
+        if not IsUnitType(u, UNIT_TYPE_STRUCTURE) or IsUnitTower(u) then
+          set enemy = enemy + GetUnitStrength(u)
+        endif
+      endif
+    endif
+    call GroupRemoveUnit(g, u)
+  endloop
+  call DestroyGroup(g)
+  set g = null
+  // Do not send a returning hero across the map into an already active fight.
+  return troops >= requiredTroops and ((defense and enemy > 0 and own >= enemy) or (not defense and enemy == 0))
+endfunction
+
+function UpdateHeroRegroup takes unit u returns boolean
+  local location destination = null
+  local location here = null
+  local boolean joining = false
+  if not IsUnitInGroup(u, hero_regroup) then
+    return false
+  endif
+  if not UnitAlive(u) then
+    call GroupRemoveUnit(hero_regroup, u)
+    return true
+  endif
+  if teleporting or IsRetreatTeleporting(u) or IsUnitLoaded(u) then
+    return true
+  endif
+  call DebugHeroRemoveGuardPosition(u, "UpdateHeroRegroup")
+  call UpdateRecoveryHome()
+  set destination = GetRecoveryHome()
+  set here = GetUnitLoc(u)
+  if not isfleeing and not canflee then
+    // A supported local defense can take ownership; distant defense cannot.
+    if CanHeroJoinGroup(here, true, 2) then
+      call ReleaseRegroupHero(u)
+      call RemoveLocation(here)
+      set here = null
+      set destination = null
+      return true
+    endif
+    if attack_running and main_army >= 0 and army_loc[main_army] != null then
+      if CanHeroJoinGroup(army_loc[main_army], false, 2) then
+        set destination = army_loc[main_army]
+        set joining = true
+      endif
+    endif
+  endif
+  if joining and not CanHeroJoinGroup(here, false, 0) then
+    set destination = GetRecoveryHome()
+    set joining = false
+  endif
+  // Re-evaluate the rendezvous every tick; never retain a destroyed group's location.
+  if joining and IsUnitInRangeLoc(u, destination, 500) and CanHeroJoinGroup(here, false, 2) then
+    call ReleaseRegroupHero(u)
+  elseif IsUnitInRangeLoc(u, destination, 350) then
+    call DebugHeroIssueImmediateOrder(u, "holdposition", "UpdateHeroRegroup")
+  else
+    call DebugHeroIssuePointOrderLoc(u, "move", destination, "UpdateHeroRegroup")
+  endif
+  call RemoveLocation(here)
+  set here = null
+  set destination = null
+  return true
+endfunction

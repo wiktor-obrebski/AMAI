@@ -15,6 +15,7 @@
     boolean retreat_end_switch = false
     integer added_target_aggression = 0  // The current bonus aggression added to current attack specified in the profiles
     integer added_racial_aggression = 0  // The current bonus added to current attack based on which race amai is attacking
+    group hero_regroup = CreateGroup()
     group in_retreat_group = CreateGroup()
     group retreat_reset_pending = CreateGroup()
 

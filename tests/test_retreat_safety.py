@@ -88,12 +88,13 @@ class RetreatSafetyTests(unittest.TestCase):
         self.assertEqual(self.jobs, [(15, 'retreat', 0, 'hero')])
         self.assertEqual(self.recycled, [])
 
-    def test_no_healing_resource_does_not_prevent_release(self):
+    def test_no_healing_resource_does_not_prevent_regroup_handoff(self):
         self.pending()
         self.env['RetreatRecovery'] = lambda u: False
         self.env['ResetRetreatJob']('hero')
-        self.assertFalse(self.env['IsRetreatOrderLocked']('hero'))
-        self.assertEqual(self.recycled, ['hero'])
+        self.assertTrue(self.env['IsRetreatOrderLocked']('hero'))
+        self.assertIn('hero',self.env['hero_regroup'])
+        self.assertEqual(self.recycled, [])
 
     def test_send_home_preserves_tp_instead_of_moving_or_holding(self):
         self.channel = True
