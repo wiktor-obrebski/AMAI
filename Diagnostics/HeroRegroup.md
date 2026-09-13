@@ -18,9 +18,10 @@ Release has three explicit cases:
   are released together immediately before InitAssault. This avoids starving
   early creeping or an army rebuilding around its returning hero.
 - Active operation: use the existing main army location only when at least two
-  ready non-hero, non-summoned troops are actually nearby and no visible player
+  ready non-hero, non-summoned, non-illusion troops are actually nearby and no visible player
   enemy is there. Move toward this friendly rendezvous and retain control until
-  within 500 with ready support nearby. Recheck the group every tick. Visible
+  within 500 with ready support nearby; proximity to the center alone does not
+  stop the approach. Recheck the group every tick. Visible
   player enemies along the trip, or an unavailable group, redirect to recovery.
 - Local defense: at least two ready troops and local friendly strength at least
   equal to visible enemy strength. A remote town-threat flag alone does not

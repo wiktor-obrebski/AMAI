@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - Undead will buy an orb of corruption if you have a lich.
 
 ### Fixed
+- Keep regrouping heroes approaching until support is in range; exclude friendly illusions from regroup support.
 - Regroup returning heroes under explicit control before releasing them to a ready army, local defense, or the next formation at recovery.
 - Capture units already at recovery, including TP arrivals, without counting them as still travelling.
 - Separate retreat/healing destinations from tactical captain home; retain a recovery town hall until it is lost or a less threatened base is available, and use it for emergency home teleports.

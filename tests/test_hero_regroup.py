@@ -8,6 +8,7 @@ class HeroRegroupTests(unittest.TestCase):
         self.pos={'hero':0,'second':0,'troop1':3000,'troop2':3100,'enemy':3000}
         self.units=['hero','second','troop1','troop2']
         self.dead=set()
+        self.illusions=set()
         self.orders=[]
         self.recycled=[]
         self.threat=False
@@ -32,6 +33,7 @@ class HeroRegroupTests(unittest.TestCase):
             CreateGroup=list,GroupEnumUnitsInRangeOfLoc=lambda g,l,r,f:g.extend(u for u in self.units if abs(self.pos[u]-l)<=r),
             FirstOfGroup=lambda g:g[0] if g else None,DestroyGroup=lambda g:None,
             IsUnitHidden=lambda u:False,IsUnitLoaded=lambda u:False,
+            IsUnitIllusion=lambda u:u in self.illusions,
             UNIT_TYPE_PEON='peon',UNIT_TYPE_STRUCTURE='structure',UNIT_TYPE_HERO='hero',UNIT_TYPE_SUMMONED='summon',
             IsUnitType=lambda u,t:t=='hero' and u in ['hero','second'],
             UNIT_STATE_MAX_LIFE='max',GetUnitState=lambda *a:100,
@@ -163,3 +165,20 @@ class HeroRegroupTests(unittest.TestCase):
             self.assertEqual(self.env['hero_regroup'],set())
             self.assertEqual(self.orders,[])
             self.assertEqual(self.recycled,[])
+
+    def test_approach_does_not_stop_before_support_is_in_range(self):
+        self.hold();self.env['attack_running']=True
+        self.pos.update(hero=2700,troop1=3700,troop2=3720)
+        self.tick()
+        self.assertEqual(self.orders[-1],('hero','move',3000))
+        self.assertEqual(self.recycled,[])
+        self.pos['hero']=3000
+        self.tick()
+        self.assertEqual(self.recycled,['hero'])
+
+    def test_illusions_cannot_supply_a_ready_army(self):
+        self.hold();self.env['attack_running']=True
+        self.illusions.update(['troop1','troop2'])
+        self.tick()
+        self.assertEqual(self.orders[-1],('hero','holdposition'))
+        self.assertEqual(self.recycled,[])

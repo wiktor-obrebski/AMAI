@@ -51,7 +51,7 @@ function CanHeroJoinGroup takes location l, boolean defense, integer requiredTro
     set u = FirstOfGroup(g)
     exitwhen u == null
     if UnitAlive(u) and not IsUnitHidden(u) and not IsUnitLoaded(u) and not IsUnitType(u, UNIT_TYPE_PEON) and GetUnitState(u, UNIT_STATE_MAX_LIFE) > 0 then
-      if GetOwningPlayer(u) == ai_player and IsStandardUnit(u) and not IsUnitBuying(u) then
+      if GetOwningPlayer(u) == ai_player and IsStandardUnit(u) and not IsUnitBuying(u) and not IsUnitIllusion(u) then
         if not IsUnitType(u, UNIT_TYPE_STRUCTURE) then
           set own = own + GetUnitStrength(u)
           if not IsUnitType(u, UNIT_TYPE_HERO) and not IsUnitType(u, UNIT_TYPE_SUMMONED) then
@@ -115,7 +115,7 @@ function UpdateHeroRegroup takes unit u returns boolean
   // Re-evaluate the rendezvous every tick; never retain a destroyed group's location.
   if joining and IsUnitInRangeLoc(u, destination, 500) and CanHeroJoinGroup(here, false, 2) then
     call ReleaseRegroupHero(u)
-  elseif IsUnitInRangeLoc(u, destination, 350) then
+  elseif not joining and IsUnitInRangeLoc(u, destination, 350) then
     call DebugHeroIssueImmediateOrder(u, "holdposition", "UpdateHeroRegroup")
   else
     call DebugHeroIssuePointOrderLoc(u, "move", destination, "UpdateHeroRegroup")
