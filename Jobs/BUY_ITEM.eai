@@ -80,6 +80,9 @@ local integer detectedenemies = GetLocationNonCreepStrength(GetUnitX(shop_sent),
       set shop_buy_time_small = -1
       return
     endif
+    // The replacement hero has not been detached by this shopping job yet.
+    set shop_buy_time_large = -1
+    set shop_buy_time_small = -1
 	call GroupAddUnit(unit_buying_item, shop_sent)
   endif
  
@@ -101,11 +104,11 @@ local integer detectedenemies = GetLocationNonCreepStrength(GetUnitX(shop_sent),
   else
     if town_threatened or attack_running then
 		call CreateDebugTag("BUY_ITEM:in attack so dont get item", 10, shop_sent, 3.00, 1.50) 
-      call ReturnUnitToArmy(shop_sent)
+      // No ownership was taken if shopping was rejected before its first order.
+      if shop_buy_time_large >= 0 then
+        call ReturnUnitToArmy(shop_sent)
+      endif
 		call GroupRemoveUnit(unit_buying_item, shop_sent)
-		if IsStandardUnit(shop_sent) then
-      call DebugHeroAddAssault(1, GetUnitTypeId(shop_sent), "Jobs/BUY_ITEM.eai:BuyItemJob:106")
-    endif
     	set shop_sent = null
     	set shop_ordered = false
     	set shop_buy_time_large = -1
@@ -155,12 +158,11 @@ local integer detectedenemies = GetLocationNonCreepStrength(GetUnitX(shop_sent),
 
   
   if GetItemNumber(id) >= shop_wanted or shop_unit == null or (not UnitAlive(shop_unit)) or (shop_sent != null and GetSlotsFreeOnUnit(shop_sent) <= 0 and not healing) then
-    call ReturnUnitToArmy(shop_sent)
-	call GroupRemoveUnit(unit_buying_item, shop_sent)
-	call CreateDebugTag("BUT_ITEM: Items have been brought", 10, shop_sent, 3.00, 1.50) 
-	if IsStandardUnit(shop_sent) then
-      call DebugHeroAddAssault(1, GetUnitTypeId(shop_sent), "Jobs/BUY_ITEM.eai:BuyItemJob:159")
+    if shop_buy_time_large >= 0 then
+      call ReturnUnitToArmy(shop_sent)
     endif
+	call GroupRemoveUnit(unit_buying_item, shop_sent)
+	call CreateDebugTag("BUT_ITEM: Items have been brought", 10, shop_sent, 3.00, 1.50)
     set shop_sent = null
     set shop_ordered = false
     set shop_buy_time_large = -1

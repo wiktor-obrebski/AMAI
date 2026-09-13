@@ -5,7 +5,7 @@ from test_retreat_ownership import load_jass_function, function_source
 
 class HeroRegroupTests(unittest.TestCase):
     def setUp(self):
-        self.pos={'hero':0,'second':0,'troop1':3000,'troop2':3100,'enemy':3000}
+        self.pos={'hero':0,'second':0,'troop1':3000,'troop2':3000,'enemy':3000}
         self.units=['hero','second','troop1','troop2']
         self.dead=set()
         self.illusions=set()
@@ -29,7 +29,10 @@ class HeroRegroupTests(unittest.TestCase):
             GetUnitLoc=lambda u:self.pos[u],RemoveLocation=lambda l:None,
             isfleeing=False,canflee=False,attack_running=False,town_threatened=False,
             TownThreatened=lambda:self.threat,teleporting=False,IsRetreatTeleporting=lambda u:False,
-            main_army=0,army_loc={0:3000},
+            main_army=0,army_loc={0:3000},army_group={0:['troop1','troop2']},
+            GetUnitX=lambda u:self.pos[u],GetUnitY=lambda u:0,Location=lambda x,y:x,
+            BlzGroupAddGroupFast=lambda src,dst:dst.extend(src),
+            GroupEnumUnitsInRange=lambda g,x,y,r,f:g.extend(u for u in self.units if abs(self.pos[u]-x)<=r),
             CreateGroup=list,GroupEnumUnitsInRangeOfLoc=lambda g,l,r,f:g.extend(u for u in self.units if abs(self.pos[u]-l)<=r),
             FirstOfGroup=lambda g:g[0] if g else None,DestroyGroup=lambda g:None,
             IsUnitHidden=lambda u:False,IsUnitLoaded=lambda u:False,
@@ -41,9 +44,9 @@ class HeroRegroupTests(unittest.TestCase):
             IsUnitBuying=lambda u:False,GetUnitStrength=lambda u:self.strength[u],IsUnitTower=lambda u:False,
             IsPlayerEnemy=lambda a,b:b=='enemy',Player=lambda p:p,PLAYER_NEUTRAL_AGGRESSIVE='creep',
             IsUnitVisible=lambda *a:True,IsUnitInvisible=lambda *a:False)
-        for name in ['IsRetreatOrderLocked','RecycleGuardPositionAM','IsHeroStagedForFormation','IsStandardUnit','IsRetreatUnavailableForAttack']:
+        for name in ['IsHeroRegroupAreaQuiet','IsRetreatOrderLocked','RecycleGuardPositionAM','IsHeroStagedForFormation','IsStandardUnit','IsRetreatUnavailableForAttack']:
             load_jass_function(self.env,'common.eai',name)
-        for name in ['ReturnUnitToArmy','ReleaseRegroupHero','ReleaseStagedHeroes','CanHeroJoinGroup','UpdateHeroRegroup']:
+        for name in ['ReturnUnitToArmy','ReleaseRegroupHero','ReleaseStagedHeroes','CanHeroJoinGroup','GetHeroRegroupRendezvous','UpdateHeroRegroup']:
             load_jass_function(self.env,'HeroRegroup.eai',name)
         load_jass_function(self.env,'Jobs/RESET_GUARD_POSITION.eai','ResetGuardPositionJob')
 
@@ -89,7 +92,7 @@ class HeroRegroupTests(unittest.TestCase):
     def test_missing_dead_or_recovering_group_is_not_a_rendezvous(self):
         for mode in ['missing','dead','pending']:
             self.setUp();self.hold();self.env['attack_running']=True
-            if mode=='missing':self.env['army_loc'][0]=None
+            if mode=='missing':self.env['army_group'][0]=None
             if mode=='dead':self.dead.update(['troop1','troop2'])
             if mode=='pending':self.env['retreat_reset_pending'].update(['troop1','troop2'])
             self.tick()
@@ -105,12 +108,12 @@ class HeroRegroupTests(unittest.TestCase):
             self.assertEqual(self.recycled,[])
 
     def test_only_supported_local_defense_can_release(self):
-        self.hold();self.threat=True
+        self.hold();self.threat=True;self.units.append('enemy');self.pos['enemy']=100
         self.env['ReleaseStagedHeroes']()
         self.tick()
         self.assertEqual(self.recycled,[])
         self.pos.update(troop1=0,troop2=100,enemy=0)
-        self.units.append('enemy');self.strength['enemy']=5
+        self.strength['enemy']=5
         self.tick()
         self.assertEqual(self.recycled,['hero'])
 
@@ -130,7 +133,7 @@ class HeroRegroupTests(unittest.TestCase):
         self.assertNotIn('call Sleep',between)
         buy=function_source('Jobs/BUY_ITEM.eai','BuyItemJob')
         self.assertNotIn('call RecycleGuardPositionAM',buy)
-        self.assertEqual(buy.count('if IsStandardUnit(shop_sent) then'),2)
+        self.assertNotIn('DebugHeroAddAssault',buy)
 
     def test_native_formation_cannot_recruit_regroup_owned_hero_type(self):
         assaults=[]
@@ -168,7 +171,7 @@ class HeroRegroupTests(unittest.TestCase):
 
     def test_approach_does_not_stop_before_support_is_in_range(self):
         self.hold();self.env['attack_running']=True
-        self.pos.update(hero=2700,troop1=3700,troop2=3720)
+        self.pos.update(hero=2700,troop1=2300,troop2=3700)
         self.tick()
         self.assertEqual(self.orders[-1],('hero','move',3000))
         self.assertEqual(self.recycled,[])
@@ -182,3 +185,85 @@ class HeroRegroupTests(unittest.TestCase):
         self.tick()
         self.assertEqual(self.orders[-1],('hero','holdposition'))
         self.assertEqual(self.recycled,[])
+
+
+    def shopping_fixture(self, started=False):
+        self.pos['hero']=1400
+        self.env.update(GetFloatGameState=lambda *a:0,GAME_STATE_TIME_OF_DAY=0,
+            TimerGetElapsed=lambda *a:100,tq_timer=0,
+            GetUnitX=lambda u:self.pos[u],GetUnitY=lambda u:0,
+            GetLocationNonCreepStrength=lambda *a:0,shop_ordered=True,shop_sent='hero',
+            retreat_home=False,shop_unit='shop',DistanceBetweenUnits=lambda *a:4000,
+            GetUnitTypeId=lambda u:u,old_id={'shop':'shop',1:1},racial_shop='shop',
+            shop_buy_time_large=90 if started else -1,shop_buy_time_small=-1,
+            unit_buying_item={'hero'},IsHealingItem=lambda *a:False,
+            buy_timeout_large=1000,buy_timeout_small=1000,GetItemNumber=lambda *a:1,
+            shop_wanted=1,GetSlotsFreeOnUnit=lambda *a:1,
+            AddAssault=lambda *a:self.fail('Cancelled shopping must not add assault units'))
+        self.env['attack_running']=True
+        load_jass_function(self.env,'Jobs/BUY_ITEM.eai','BuyItemJob')
+
+    def test_cancelled_shopping_before_detachment_preserves_active_hero(self):
+        self.shopping_fixture()
+        self.env['BuyItemJob'](1)
+        self.assertFalse(self.env['shop_ordered'])
+        self.assertEqual(self.env['unit_buying_item'],set())
+        self.assertEqual(self.env['hero_regroup'],set())
+        self.assertEqual(self.orders,[])
+
+    def test_cancelled_shopping_after_detachment_still_regroups(self):
+        self.shopping_fixture(started=True)
+        self.env['BuyItemJob'](1)
+        self.assertIn('hero',self.env['hero_regroup'])
+
+    def test_remote_threat_does_not_select_distant_hero_over_staged_hero(self):
+        self.hold();self.threat=True;self.env['town_threatened']=True
+        self.env.update(hero_built={1:True,2:True,3:False})
+        load_jass_function(self.env,'common.eai','GetMajorHero')
+        self.assertEqual(self.env['GetMajorHero'](None),'hero')
+        self.env['ReleaseStagedHeroes']()
+        self.assertEqual(self.recycled,['hero'])
+
+    def test_local_enemy_still_prevents_staged_release(self):
+        self.hold();self.units.append('enemy');self.pos['enemy']=100
+        self.assertFalse(self.env['IsHeroStagedForFormation']('hero'))
+        self.env['ReleaseStagedHeroes']()
+        self.assertEqual(self.recycled,[])
+
+    def test_moving_army_does_not_reverse_hero_toward_home(self):
+        self.hold();self.env['attack_running']=True
+        self.env['army_group']={0:['troop1','troop2']}
+        self.pos.update(troop1=4000,troop2=4100)
+        self.tick()
+        self.assertEqual(self.orders[-1],('hero','move',4050))
+        self.pos.update(hero=1400,troop1=5100,troop2=5200)
+        self.tick()
+        self.assertEqual(self.orders[-1],('hero','move',5150))
+
+
+    def test_already_satisfied_shopping_request_does_not_detach_hero(self):
+        self.shopping_fixture()
+        self.env['attack_running']=False
+        self.env['BuyItemJob'](1)
+        self.assertEqual(self.env['hero_regroup'],set())
+        self.assertEqual(self.orders,[])
+
+    def test_replacement_shopper_does_not_inherit_dead_shoppers_ownership(self):
+        self.shopping_fixture(started=True)
+        self.env.update(shop_sent='deadhero',buy_type={1:1},BT_RACIAL_ITEM=1,
+            GetHeroToBuyItem=lambda *a:'hero',shop_distance_limit=5000)
+        self.pos['deadhero']=1000;self.dead.add('deadhero')
+        self.env['BuyItemJob'](1)
+        self.assertEqual(self.env['hero_regroup'],set())
+        self.assertEqual(self.orders,[])
+
+    def test_rendezvous_reads_members_without_mutating_or_leaking_locations(self):
+        removed=[];self.env['RemoveLocation']=removed.append
+        self.hold();self.env['attack_running']=True
+        self.tick()
+        self.assertEqual(self.env['army_group'][0],['troop1','troop2'])
+        self.assertEqual(sorted(removed),[0,3000])
+        removed.clear();self.pos['hero']=3000
+        self.tick()
+        self.assertEqual(removed,[3000,3000])
+        self.assertEqual(self.recycled,['hero'])

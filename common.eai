@@ -4185,6 +4185,28 @@ function AddAssaultAvailable takes integer count, integer id, string source retu
   call DebugHeroAddAssault(count, id, source)
 endfunction
 
+// A remote native town threat must not exclude a hero staged at a quiet base.
+// Keep this local check independent of strength-query globals and planning state.
+function IsHeroRegroupAreaQuiet takes unit heroUnit returns boolean
+  local group g = CreateGroup()
+  local unit u = null
+  local boolean quiet = true
+  call GroupEnumUnitsInRange(g, GetUnitX(heroUnit), GetUnitY(heroUnit), 900, null)
+  loop
+    set u = FirstOfGroup(g)
+    exitwhen u == null
+    if UnitAlive(u) and not IsUnitHidden(u) and not IsUnitLoaded(u) and IsPlayerEnemy(ai_player, GetOwningPlayer(u)) and GetOwningPlayer(u) != Player(PLAYER_NEUTRAL_AGGRESSIVE) and IsUnitVisible(u, ai_player) and not IsUnitInvisible(u, ai_player) then
+      set quiet = false
+      exitwhen true
+    endif
+    call GroupRemoveUnit(g, u)
+  endloop
+  call DestroyGroup(g)
+  set g = null
+  set u = null
+  return quiet
+endfunction
+
 // Planning may use staged heroes; ordinary orders still cannot use them.
 function IsHeroStagedForFormation takes unit u returns boolean
   local location l = recovery_home
@@ -4195,7 +4217,7 @@ function IsHeroStagedForFormation takes unit u returns boolean
     set l = null
     return false
   endif
-  if not attack_running and not isfleeing and not canflee and not teleporting and not IsUnitLoaded(u) and not IsUnitHidden(u) and not town_threatened and not TownThreatened() and IsUnitInRangeLoc(u, l, 650) then
+  if not attack_running and not isfleeing and not canflee and not teleporting and not IsUnitLoaded(u) and not IsUnitHidden(u) and IsUnitInRangeLoc(u, l, 650) and IsHeroRegroupAreaQuiet(u) then
     set l = null
     return true
   endif

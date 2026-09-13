@@ -74,9 +74,48 @@ function CanHeroJoinGroup takes location l, boolean defense, integer requiredTro
   return troops >= requiredTroops and ((defense and enemy > 0 and own >= enemy) or (not defense and enemy == 0))
 endfunction
 
+// Return an owned location based on current troop positions, not army_loc's
+// periodic snapshot. Never mutate ARMY_TRACK's membership while inspecting it.
+function GetHeroRegroupRendezvous takes nothing returns location
+  local group g = null
+  local unit u = null
+  local location l = null
+  local integer count = 0
+  local real x = 0
+  local real y = 0
+  if main_army < 0 or army_group[main_army] == null then
+    return null
+  endif
+  set g = CreateGroup()
+  call BlzGroupAddGroupFast(army_group[main_army], g)
+  loop
+    set u = FirstOfGroup(g)
+    exitwhen u == null
+    if UnitAlive(u) and GetOwningPlayer(u) == ai_player and IsStandardUnit(u) and not IsUnitBuying(u) and not IsUnitHidden(u) and not IsUnitLoaded(u) and not IsUnitIllusion(u) and not IsUnitType(u, UNIT_TYPE_PEON) and not IsUnitType(u, UNIT_TYPE_STRUCTURE) and not IsUnitType(u, UNIT_TYPE_HERO) and not IsUnitType(u, UNIT_TYPE_SUMMONED) then
+      set x = x + GetUnitX(u)
+      set y = y + GetUnitY(u)
+      set count = count + 1
+    endif
+    call GroupRemoveUnit(g, u)
+  endloop
+  call DestroyGroup(g)
+  set g = null
+  set u = null
+  if count >= 2 then
+    set l = Location(x / count, y / count)
+    if CanHeroJoinGroup(l, false, 2) then
+      return l
+    endif
+    call RemoveLocation(l)
+  endif
+  set l = null
+  return null
+endfunction
+
 function UpdateHeroRegroup takes unit u returns boolean
   local location destination = null
   local location here = null
+  local location rendezvous = null
   local boolean joining = false
   if not IsUnitInGroup(u, hero_regroup) then
     return false
@@ -101,9 +140,10 @@ function UpdateHeroRegroup takes unit u returns boolean
       set destination = null
       return true
     endif
-    if attack_running and main_army >= 0 and army_loc[main_army] != null then
-      if CanHeroJoinGroup(army_loc[main_army], false, 2) then
-        set destination = army_loc[main_army]
+    if attack_running then
+      set rendezvous = GetHeroRegroupRendezvous()
+      if rendezvous != null then
+        set destination = rendezvous
         set joining = true
       endif
     endif
@@ -121,6 +161,10 @@ function UpdateHeroRegroup takes unit u returns boolean
     call DebugHeroIssuePointOrderLoc(u, "move", destination, "UpdateHeroRegroup")
   endif
   call RemoveLocation(here)
+  if rendezvous != null then
+    call RemoveLocation(rendezvous)
+  endif
+  set rendezvous = null
   set here = null
   set destination = null
   return true
