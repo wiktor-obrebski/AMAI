@@ -128,7 +128,7 @@ class HeroTrackingTests(unittest.TestCase):
             text=path.read_text()
             locals_=set(re.findall(r'\blocal \w+ (\w+)',text))
             for var in re.findall(r'^\s*set (\w+)',text,re.M):
-                self.assertTrue(var in locals_ or var.startswith(('debug_hero_','amai_hero_')), (path,var))
+                self.assertTrue(var in locals_ or var.startswith(('debug_hero_','debug_attack_','amai_hero_')), (path,var))
             if path.name!='HeroOrders.eai':
                 self.assertNotRegex(text,r'\b(?:Issue\w+|UnitUseItem\w*|CaptainGoHome|CaptainAttack|RemoveGuardPosition|RecycleGuardPosition)\(')
             self.assertNotRegex(text,r'\b(?:GetOwnStrength|GetOwnAttackStrength|GetRandomInt|GetRandomReal|GetTargetStrength|Select\w+)\(')
