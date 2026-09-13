@@ -18,7 +18,7 @@
   real array hero_ally_density
   location array hero_ally_loc
 
-  integer array hero_isolation_checks
+  boolean array hero_isolation_seen
 
   boolean main_hero_home_tp_retreat_pending = false
 #ELSE
@@ -326,12 +326,12 @@ function RetreatUnsupportedHero takes integer hn returns boolean
   local boolean threatened = false
 
   if not UnitAlive(u) or teleporting or IsRetreatTeleporting(u) or not IsStandardUnit(u) or IsUnitBuying(u) or IsUnitLoaded(u) or IsUnitHidden(u) then
-    set hero_isolation_checks[hn] = 0
+    set hero_isolation_seen[hn] = false
     set u = null
     return false
   endif
   if DistanceBetweenPoints_dk(GetUnitLoc(u), GetRecoveryHome()) < 1200 then
-    set hero_isolation_checks[hn] = 0
+    set hero_isolation_seen[hn] = false
     set u = null
     return false
   endif
@@ -358,16 +358,12 @@ function RetreatUnsupportedHero takes integer hn returns boolean
   call DestroyGroup(g)
   set g = null
   set threatened = support <= 2 and enemy > own * 1.5
-  if threatened then
-    set hero_isolation_checks[hn] = hero_isolation_checks[hn] + 1
-  else
-    set hero_isolation_checks[hn] = 0
-  endif
-  if hero_isolation_checks[hn] < 2 then
+  if not threatened or not hero_isolation_seen[hn] then
+    set hero_isolation_seen[hn] = threatened
     set u = null
     return false
   endif
-  set hero_isolation_checks[hn] = 0
+  set hero_isolation_seen[hn] = false
   call TraceAll("DBG HERO ISOLATED RETREAT: id=" + Int2Str(GetHandleId(u)) + " own=" + Int2Str(R2I(own)) + " enemy=" + Int2Str(R2I(enemy)) + " support=" + Int2Str(support) + " attack=" + B2S(attack_running) + " retreatCtl=" + B2S(retreat_controlled))
   call GroupAddUnit(in_retreat_group, u)
   call DebugHeroRemoveGuardPosition(u, "MICRO_HERO:RetreatUnsupportedHero")
@@ -433,7 +429,7 @@ function MicroHeroJob takes integer hn returns nothing
   //  call DisplayToAll(Int2Str(R2I(DistanceBetweenPoints(hero_enemy_loc[hn],GetUnitLoc(hero_unit[hn])))))
 
     if IsRetreatOrderLocked(hero_unit[hn]) then
-      set hero_isolation_checks[hn] = 0
+      set hero_isolation_seen[hn] = false
       call RescueRetreatHero(hn)
       call TQAddJob(1 * sleep_multiplier, MICRO_HERO, hn)
       return
@@ -461,7 +457,7 @@ function MicroHeroJob takes integer hn returns nothing
       endif
     endif
   else
-    set hero_isolation_checks[hn] = 0
+    set hero_isolation_seen[hn] = false
   endif
   call TQAddJob(1 * sleep_multiplier, MICRO_HERO, hn)
   //call DisplayToAll("MICRO_HERO END")

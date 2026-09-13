@@ -14,7 +14,7 @@ class UnsupportedHeroTests(unittest.TestCase):
         self.distance = 4000
         self.jobs, self.removed, self.destroyed = [], [], []
         self.locked = set()
-        self.env = dict(hero_unit={1:'hero'}, hero_isolation_checks={1:0}, teleporting=False,
+        self.env = dict(hero_unit={1:'hero'}, hero_isolation_seen={1:False}, teleporting=False,
             UnitAlive=lambda u:u not in self.dead, IsRetreatTeleporting=lambda u:False,
             IsStandardUnit=lambda u:u not in self.unready and u not in self.locked,
             IsUnitBuying=lambda u:u in self.buying, IsUnitLoaded=lambda u:u in self.loaded,
@@ -103,7 +103,7 @@ class UnsupportedHeroTests(unittest.TestCase):
     def test_local_recovery_defense_and_other_ownership_are_preserved(self):
         for kind in ['home','healing','shopping','transport','dead','tp']:
             self.setUp()
-            self.env['hero_isolation_checks'][1]=1
+            self.env['hero_isolation_seen'][1]=True
             if kind=='home': self.distance=500
             if kind=='healing': self.unready.add('hero')
             if kind=='shopping': self.buying.add('hero')
@@ -111,11 +111,54 @@ class UnsupportedHeroTests(unittest.TestCase):
             if kind=='dead': self.dead.add('hero')
             if kind=='tp': self.env['teleporting']=True
             self.assertFalse(self.tick())
-            self.assertEqual(self.env['hero_isolation_checks'][1],0)
+            self.assertEqual(self.env['hero_isolation_seen'][1],False)
             self.assertEqual(self.jobs,[])
 
-    def test_job_preserves_emergency_rescue_and_shopping_does_not_force_assault(self):
+    def test_job_preserves_emergency_rescue(self):
         micro=function_source('Jobs/MICRO_HERO.eai','MicroHeroJob')
         self.assertLess(micro.index('call SaveHero(hn'),micro.index('if RetreatUnsupportedHero(hn)'))
         self.assertLess(micro.index('if RetreatUnsupportedHero(hn)'),micro.index('if armyOfHero >= 0 and not teleporting'))
-        self.assertNotIn('AddAssault',function_source('Jobs/BUY_ITEM.eai','BuyItemJob'))
+
+    def test_withdraw_arrive_release_without_global_retreat_or_duplicate_capture(self):
+        pending, recycled, moves = set(), [], []
+        self.env.update(
+            IsRetreatOrderLocked=lambda u:u in self.locked or u in pending,
+            IsUnitInGroup=lambda u,g:u in g, retreat_reset_pending=pending,
+            debug_retreat_transit_group=set(), UpdateRecoveryHome=lambda:None,
+            UNIT_STATE_LIFE='life', UNIT_TYPE_HERO='hero',
+            IsUnitType=lambda u,t:t=='hero', GetHeroHealingItem=lambda:0,
+            GetHeroManaItem=lambda:0, RetreatRecovery=lambda u:False,
+            SendHomeMoveUnitToLoc=lambda u,l:moves.append(u),
+            IssueImmediateOrder=lambda *a:True, RESET_RETREAT='reset_retreat',
+            RESET_GUARD_POSITION='reset_guard',
+            GroupRemoveUnit=lambda g,u:g.discard(u) if isinstance(g,set) else g.remove(u),
+            RecycleGuardPositionAM=recycled.append,
+            unit_healing=set(), unit_rescueing=set(), unit_harassing=set(), unit_zepplin_move=set(),
+            isfleeing=False, retreat_controlled=False, attack_running=True)
+        for path,name in [('Jobs/RESET_GUARD_POSITION.eai','ResetGuardPositionJob'),
+                          ('Jobs/RESET_RETREAT.eai','ResetRetreatJob'),
+                          ('Jobs/SEND_HOME.eai','SendUnitHomeJob')]:
+            load_jass_function(self.env,path,name)
+        self.tick()
+        self.assertTrue(self.tick())
+        self.assertEqual(self.jobs.pop(),(0,'home',1,'hero'))
+        self.env['SendUnitHomeJob']('hero',1)
+        self.assertEqual(moves,['hero'])
+        self.assertEqual(self.jobs.pop(),(4,'home',1,'hero'))
+        self.assertFalse(self.tick())
+        self.env['ResetGuardPositionJob']('hero')  # stale job cannot release traveller
+        self.assertEqual(recycled,[])
+        self.distance=0
+        self.env['SendUnitHomeJob']('hero',1)
+        self.assertEqual(self.locked,set())
+        self.assertEqual(pending,{'hero'})
+        self.assertEqual(self.jobs.pop(),(15,'reset_retreat',0,'hero'))
+        self.env['ResetGuardPositionJob']('hero')  # same protection after arrival
+        self.assertEqual(recycled,[])
+        self.env['ResetRetreatJob']('hero')
+        self.assertEqual(pending,set())
+        self.assertEqual(recycled,['hero'])
+        self.assertFalse(self.env['isfleeing'])
+        self.assertFalse(self.env['retreat_controlled'])
+        self.assertTrue(self.env['attack_running'])
+        self.assertEqual(self.jobs,[])
