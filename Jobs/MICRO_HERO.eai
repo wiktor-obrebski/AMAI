@@ -18,6 +18,8 @@
   real array hero_ally_density
   location array hero_ally_loc
 
+  boolean array hero_isolation_seen
+
   boolean main_hero_home_tp_retreat_pending = false
 #ELSE
 
@@ -311,6 +313,65 @@ function RescueRetreatHero takes integer hn returns nothing
   set u = null
 endfunction
 
+// Watch individual heroes even when no offensive retreat controller is running.
+// Keep normal creeping and local base defense; only withdraw an outmatched
+// hero with at most two ready supporting combat units away from recovery.
+function RetreatUnsupportedHero takes integer hn returns boolean
+  local unit u = hero_unit[hn]
+  local unit nearby = null
+  local group g = null
+  local real own = 0
+  local real enemy = 0
+  local integer support = 0
+  local boolean threatened = false
+
+  if not UnitAlive(u) or teleporting or IsRetreatTeleporting(u) or not IsStandardUnit(u) or IsUnitBuying(u) or IsUnitLoaded(u) or IsUnitHidden(u) then
+    set hero_isolation_seen[hn] = false
+    set u = null
+    return false
+  endif
+  if DistanceBetweenPoints_dk(GetUnitLoc(u), GetRecoveryHome()) < 1200 then
+    set hero_isolation_seen[hn] = false
+    set u = null
+    return false
+  endif
+  set own = GetUnitStrength(u)
+  set g = CreateGroup()
+  call GroupEnumUnitsInRange(g, GetUnitX(u), GetUnitY(u), 1000, null)
+  loop
+    set nearby = FirstOfGroup(g)
+    exitwhen nearby == null
+    if nearby != u and UnitAlive(nearby) and not IsUnitHidden(nearby) and not IsUnitLoaded(nearby) and GetUnitState(nearby, UNIT_STATE_MAX_LIFE) > 0 and not IsUnitType(nearby, UNIT_TYPE_PEON) and (not IsUnitType(nearby, UNIT_TYPE_STRUCTURE) or IsUnitTower(nearby)) then
+      if IsPlayerAlly(ai_player, GetOwningPlayer(nearby)) then
+        if GetOwningPlayer(nearby) != ai_player or (IsStandardUnit(nearby) and not IsUnitBuying(nearby)) then
+          set own = own + GetUnitStrength(nearby)
+          if not IsUnitType(nearby, UNIT_TYPE_STRUCTURE) then
+            set support = support + 1
+          endif
+        endif
+      elseif GetOwningPlayer(nearby) != Player(PLAYER_NEUTRAL_AGGRESSIVE) and IsPlayerEnemy(ai_player, GetOwningPlayer(nearby)) and IsUnitVisible(nearby, ai_player) and not IsUnitInvisible(nearby, ai_player) then
+        set enemy = enemy + GetUnitStrength(nearby)
+      endif
+    endif
+    call GroupRemoveUnit(g, nearby)
+  endloop
+  call DestroyGroup(g)
+  set g = null
+  set threatened = support <= 2 and enemy > own * 1.5
+  if not threatened or not hero_isolation_seen[hn] then
+    set hero_isolation_seen[hn] = threatened
+    set u = null
+    return false
+  endif
+  set hero_isolation_seen[hn] = false
+  call TraceAll("DBG HERO ISOLATED RETREAT: id=" + Int2Str(GetHandleId(u)) + " own=" + Int2Str(R2I(own)) + " enemy=" + Int2Str(R2I(enemy)) + " support=" + Int2Str(support) + " attack=" + B2S(attack_running) + " retreatCtl=" + B2S(retreat_controlled))
+  call GroupAddUnit(in_retreat_group, u)
+  call DebugHeroRemoveGuardPosition(u, "MICRO_HERO:RetreatUnsupportedHero")
+  call TQAddUnitJob(0, SEND_HOME, 1, u)
+  set u = null
+  return true
+endfunction
+
 function MicroHeroJob takes integer hn returns nothing
   local real new_hp = 0.0
   local real teleportdistance = 0.0
@@ -368,6 +429,7 @@ function MicroHeroJob takes integer hn returns nothing
   //  call DisplayToAll(Int2Str(R2I(DistanceBetweenPoints(hero_enemy_loc[hn],GetUnitLoc(hero_unit[hn])))))
 
     if IsRetreatOrderLocked(hero_unit[hn]) then
+      set hero_isolation_seen[hn] = false
       call RescueRetreatHero(hn)
       call TQAddJob(1 * sleep_multiplier, MICRO_HERO, hn)
       return
@@ -375,6 +437,10 @@ function MicroHeroJob takes integer hn returns nothing
     set teleportdistance = DistanceBetweenPoints(hero_loc[hn], town_loc[most_threatened_town])
     if not teleporting and GetUnitState(hero_unit[hn], UNIT_STATE_LIFE) < RMax(flee_health_percentage * GetUnitState(hero_unit[hn], UNIT_STATE_MAX_LIFE), flee_minimum_health) and not IsUnitInGroup(hero_unit[hn], unit_healing) then
       call SaveHero(hn,armyOfHero)
+    endif
+    if RetreatUnsupportedHero(hn) then
+      call TQAddJob(1 * sleep_multiplier, MICRO_HERO, hn)
+      return
     endif
     if armyOfHero >= 0 and not teleporting and GetItemNumberOnUnit(tp_item, hero_unit[hn]) > 0 then
       if town_threatened and town_threat[most_threatened_town] >= teleport_min_threat and teleportdistance > LinearInterpolation(teleport_low_threat, teleport_high_threat, teleport_low_threat_distance, teleport_high_threat_distance, town_threat[most_threatened_town]) and town_can_tp[most_threatened_town] and army_strength[armyOfHero] >= teleport_army_min_strength then
@@ -390,6 +456,8 @@ function MicroHeroJob takes integer hn returns nothing
         return
       endif
     endif
+  else
+    set hero_isolation_seen[hn] = false
   endif
   call TQAddJob(1 * sleep_multiplier, MICRO_HERO, hn)
   //call DisplayToAll("MICRO_HERO END")
