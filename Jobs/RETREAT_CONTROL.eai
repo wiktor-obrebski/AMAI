@@ -248,6 +248,7 @@ if not isfleeing and canflee and (CaptainRetreating() or (CaptainIsHome() and no
 
   set retreat_end_switch = false
   set isfleeing = true
+  call DebugHeroAttackState("STATE_WRITE", "RETREAT_CONTROL.eai:250")
 endif
 
 if isfleeing then
@@ -259,6 +260,7 @@ endif
 
 if ((not attack_running and not isfleeing) or isfleeing or (town_threatened and town_threat_break) or player_defeated) then
     set break_attack = attack_running
+    call DebugHeroAttackState("STATE_WRITE", "RETREAT_CONTROL.eai:261")
     call TraceAll("RETREAT: Pending End fleeing:" + B2S(isfleeing))
     //if (CaptainIsHome() and not main_hero_home_tp_retreat_pending) or retreat_end_switch or (not attack_running and not isfleeing) or player_defeated or (not main_hero_home_tp_retreat_pending and main_army >= 0 and army_loc[main_army] != null and DistanceBetweenPoints(army_loc[main_army], captain_home) <= 750) then
     if retreat_end_switch or (not attack_running and not isfleeing) or player_defeated or (not isfleeing and not main_hero_home_tp_retreat_pending and (CaptainIsHome() or (main_army >= 0 and army_loc[main_army] != null and DistanceBetweenPoints(army_loc[main_army], captain_home) <= 750))) then
@@ -268,12 +270,15 @@ if ((not attack_running and not isfleeing) or isfleeing or (town_threatened and 
       set debug_retreat_transit_active = false
 
       set retreat_controlled = false
+      call DebugHeroAttackState("STATE_WRITE", "RETREAT_CONTROL.eai:270")
       set debug_retreat_epoch = debug_retreat_epoch + 1
       set canflee = false
+      call DebugHeroAttackState("STATE_WRITE", "RETREAT_CONTROL.eai:272")
       if isfleeing then
         call TraceAll(          "DBG FLEE WRITE:"          + " run=" + Int2Str(debug_run_id)          + " reason=RETREAT_END"          + " old=true new=false"          + " epoch=" + Int2Str(debug_retreat_epoch))
       endif
       set isfleeing = false     // home so no need to be retreating. Also prevents bug in the captainretreating condition
+      call DebugHeroAttackState("STATE_WRITE", "RETREAT_CONTROL.eai:276")
       set retreat_end_switch = false
       call SetGroupsFlee(false)
       call TraceAll(        "DBG RC DISABLE:"        + " run=" + Int2Str(debug_run_id)        + " epoch=" + Int2Str(debug_retreat_epoch)        + " fleeing=" + B2S(isfleeing)        + " canFlee=" + B2S(canflee))
@@ -303,6 +308,7 @@ if isfleeing or (town_threatened and town_threat_break) then
             if not IsUnitInGroup(u, in_retreat_group) then
               call DebugHeroRemoveGuardPosition(u, "Jobs/RETREAT_CONTROL.eai:RetreatControlJob:300")
               call GroupAddUnit(in_retreat_group, u)
+              call DebugHeroRetreatMembership(u, "RETREAT_CONTROL.eai:305")
               call TQAddUnitJob(0, SEND_HOME, 1, u)
             endif
 
@@ -441,6 +447,7 @@ if attack_running then
     endif
     call TraceAll("RETREAT_CONTROL: Flee!!!!")
     set break_attack = attack_running
+    call DebugHeroAttackState("STATE_WRITE", "RETREAT_CONTROL.eai:443")
 
     if not debug_retreat_transit_active then
       call DebugStartRetreatTransitTracking()
@@ -453,6 +460,7 @@ if attack_running then
     endif
 
     set isfleeing = true
+    call DebugHeroAttackState("STATE_WRITE", "RETREAT_CONTROL.eai:455")
   elseif CaptainInCombat(true) and not desperation_assault and (enemy_strength_sum > ApplyFleeStrengthModifier(ally_strength_sum, false) or (battle_radius == creep_battle_radius and enemy_strength_sum > ally_strength_sum )) then
     if ordinary_creep_attack_running then
      call TraceAll("DBG CREEP ALLOWED FLEE: id=" + Int2Str(creep_debug_id) + " own=" + Int2Str(R2I(ally_strength_sum)) + " enemy=" + Int2Str(R2I(enemy_strength_sum)))
@@ -463,6 +471,7 @@ if attack_running then
     endif
     call SetGroupsFlee(true)
     set canflee = true
+    call DebugHeroAttackState("STATE_WRITE", "RETREAT_CONTROL.eai:465")
   else
     if canflee then
       call TraceAll(    "DBG FLEE ALLOW CANCEL:"    + " run=" + Int2Str(debug_run_id)    + " own=" + Int2Str(R2I(ally_strength_sum))    + " enemy=" + Int2Str(R2I(enemy_strength_sum))    + " captain=" + Int2Str(CaptainGroupSize())    + " combat=" + B2S(CaptainInCombat(true))    + " retreating=" + B2S(CaptainRetreating()))
@@ -472,7 +481,9 @@ if attack_running then
       call TraceAll(        "DBG FLEE WRITE:"        + " run=" + Int2Str(debug_run_id)        + " reason=NO_FLEE"        + " old=true new=false"        + " epoch=" + Int2Str(debug_retreat_epoch)        + " retreatCtl=" + B2S(retreat_controlled))
     endif
     set isfleeing = false
+    call DebugHeroAttackState("STATE_WRITE", "RETREAT_CONTROL.eai:474")
     set canflee = false
+    call DebugHeroAttackState("STATE_WRITE", "RETREAT_CONTROL.eai:475")
   endif
   
 endif  

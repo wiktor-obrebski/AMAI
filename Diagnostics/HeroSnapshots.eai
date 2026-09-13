@@ -53,7 +53,7 @@ function DebugHeroTrackingThread takes nothing returns nothing
   local unit trackedHero = null
   local real lastSave = 0
   call Sleep(2)
-  call DebugHeroLog("HERO TRACKING START: version=1 interval=2 supportRadius=900 clock=tq_timer")
+  call DebugHeroLog("HERO TRACKING START: version=2 interval=2 supportRadius=900 clock=tq_timer")
   loop
     exitwhen not debug_hero_tracking
     call GroupEnumUnitsOfPlayer(heroes, ai_player, null)

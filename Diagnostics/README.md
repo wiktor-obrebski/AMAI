@@ -20,7 +20,7 @@ the following logical caches. Each uses `P<zero-based player id>`, `Count`, and
 | `AMAI_HeroTrace_P<id>.w3v` | AI order sources/results, control writes, hero snapshots/support |
 | `AMAI_HeroEvents.w3v` | Map-side issued-order events, including orders without an AI source marker |
 
-Check for `HERO TRACKING START: version=1` and `HERO EVENT OBSERVER START: version=1`.
+Check for `HERO TRACKING START: version=2` and `HERO EVENT OBSERVER START: version=1`.
 If the latter is missing, do not interpret absent order events as absent orders.
 The map observer registers immediate, point and target order events for computer
 players. It does not claim that every native AI action emits such an event.
@@ -106,3 +106,41 @@ four race scripts and both map variants checked with pjass. Source-level tests
 cover enabled/disabled order wrappers, rejection results, map event fields,
 physical support and unchanged gameplay globals. They do not emulate native
 captain behavior, event delivery, pathing or actual combat.
+
+## Retreat investigation (version 2)
+
+This build adds no target clearing or retreat behavior. Keep the existing map
+observer installed; its format remains version 1.
+
+- `ATTACK LIFECYCLE` records operation begin/end, attack-loop exit/early return,
+  command issue and explicit `ClearCaptainTargets` calls. It includes attack,
+  break, canFlee, fleeing and retreat-control flags.
+- `ATTACK COMMAND` identifies the scripted target handle/coordinates and a unique
+  command number. Repeated submissions to the same target remain separate events.
+- Major AMAI attack entry points receive operation IDs. Nested operations restore
+  their parent ID on return. Operation 0 means outside those instrumented scopes;
+  it does not mean Warcraft has no native target. Ending an operation does not
+  imply that `ClearCaptainTargets` was called.
+- Hero source/control/snapshot records now include the current operation and
+  latest command number. The latest command is correlation context, not proof
+  of the hero's assignment or of the native captain's internal target.
+- `HERO RETREAT MEMBERSHIP` records each scripted add/remove to the existing
+  retreat groups, after that mutation. Sequential arrival transitions may show
+  both groups briefly; read the following transition too. `STATE_WRITE` records
+  changes in the retreat and hero-teleport paths.
+
+Align the existing map clock with the AI clock before correlating orders. Use
+membership transitions and state writes around an order to distinguish a locked
+hero, a hero never captured, and a hero released after retreat ended. Two-second
+snapshots alone are not event-time state. An unmatched map event has an unknown
+writer, not a proven native writer; events and clock matching can be incomplete.
+
+Command wrappers cover calls in AMAI `common.eai`; legacy helpers in
+`common_original.eai` and Warcraft internals are not instrumented by this change.
+No new cross-VM state transfer or event callback is introduced.
+
+Validation includes argument passthrough with tracing enabled/disabled, nested
+operation IDs, and comparison of changed gameplay statements against baseline
+404a07a after removing diagnostic statements and unwrapping calls. Diagnostic
+I/O adds overhead even though gameplay statements are unchanged. Warcraft runtime
+behavior and cross-clock correlation still require a fresh game log.

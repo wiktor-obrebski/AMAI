@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ## [3.6.0] - 2026-02-08
 
 ### Added
+- Trace attack operations, target commands/clears and hero retreat membership to diagnose orders during retreat.
 - Support for 2.0.4, increasing optimal version for REFORGED scripts.
 - Humans and orcs are now aware of safe spare mines near allies and will expand to them instead of ignoring them.
 - All races can now perform a successful tower rush at the start of the game or via commander, not just orc players and also make use of items like sacrificial skull and ivory towers. (jzy-chitong56)

@@ -13,7 +13,9 @@ function ResetRetreatJob takes unit u returns nothing
   // If the recovery base changed, recovery must follow it instead of parking forever.
   if UnitAlive(u) and DistanceBetweenPoints_dk(GetUnitLoc(u), GetRecoveryHome()) >= 650 then
     call GroupRemoveUnit(retreat_reset_pending, u)
+    call DebugHeroRetreatMembership(u, "RESET_RETREAT.eai:15")
     call GroupAddUnit(in_retreat_group, u)
+    call DebugHeroRetreatMembership(u, "RESET_RETREAT.eai:16")
     call TQAddUnitJob(0, SEND_HOME, 1, u)
     return
   endif
@@ -28,6 +30,7 @@ function ResetRetreatJob takes unit u returns nothing
   endif
   call TraceAll("DBG RETREAT RESET RELEASE: id=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " alive=" + B2S(UnitAlive(u)) + " fleeing=" + B2S(isfleeing))
   call GroupRemoveUnit(retreat_reset_pending, u)
+  call DebugHeroRetreatMembership(u, "RESET_RETREAT.eai:30")
   call ResetGuardPositionJob(u)
 endfunction
 #ENDIF

@@ -24,7 +24,7 @@ function DebugHeroState takes unit u returns string
   endif
   set dx = GetUnitX(u) - homeX
   set dy = GetUnitY(u) - homeY
-  return " hero=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " x=" + Int2Str(R2I(GetUnitX(u))) + " y=" + Int2Str(R2I(GetUnitY(u))) + " hp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_LIFE))) + " maxHp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_MAX_LIFE))) + " current=" + Int2Str(GetUnitCurrentOrder(u)) + " homeX=" + Int2Str(R2I(homeX)) + " homeY=" + Int2Str(R2I(homeY)) + " distHome=" + Int2Str(R2I(SquareRoot(dx * dx + dy * dy))) + " recoveryX=" + Int2Str(R2I(GetLocationX(recovery_home))) + " recoveryY=" + Int2Str(R2I(GetLocationY(recovery_home))) + " recoveryAnchor=" + Int2Str(GetHandleId(recovery_anchor)) + " retreat=" + B2S(IsUnitInGroup(u, in_retreat_group)) + " pending=" + B2S(IsUnitInGroup(u, retreat_reset_pending)) + " healing=" + B2S(IsUnitInGroup(u, unit_healing)) + " rescue=" + B2S(IsUnitInGroup(u, unit_rescueing)) + " harass=" + B2S(IsUnitInGroup(u, unit_harassing)) + " transport=" + B2S(IsUnitInGroup(u, unit_zepplin_move)) + " buying=" + B2S(IsUnitInGroup(u, unit_buying_item)) + " canFlee=" + B2S(canflee) + " fleeing=" + B2S(isfleeing) + " attack=" + B2S(attack_running) + " retreatCtl=" + B2S(retreat_controlled)
+  return " operation=" + Int2Str(debug_attack_operation) + " command=" + Int2Str(debug_attack_command) + " hero=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " x=" + Int2Str(R2I(GetUnitX(u))) + " y=" + Int2Str(R2I(GetUnitY(u))) + " hp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_LIFE))) + " maxHp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_MAX_LIFE))) + " current=" + Int2Str(GetUnitCurrentOrder(u)) + " homeX=" + Int2Str(R2I(homeX)) + " homeY=" + Int2Str(R2I(homeY)) + " distHome=" + Int2Str(R2I(SquareRoot(dx * dx + dy * dy))) + " recoveryX=" + Int2Str(R2I(GetLocationX(recovery_home))) + " recoveryY=" + Int2Str(R2I(GetLocationY(recovery_home))) + " recoveryAnchor=" + Int2Str(GetHandleId(recovery_anchor)) + " retreat=" + B2S(IsUnitInGroup(u, in_retreat_group)) + " pending=" + B2S(IsUnitInGroup(u, retreat_reset_pending)) + " healing=" + B2S(IsUnitInGroup(u, unit_healing)) + " rescue=" + B2S(IsUnitInGroup(u, unit_rescueing)) + " harass=" + B2S(IsUnitInGroup(u, unit_harassing)) + " transport=" + B2S(IsUnitInGroup(u, unit_zepplin_move)) + " buying=" + B2S(IsUnitInGroup(u, unit_buying_item)) + " canFlee=" + B2S(canflee) + " fleeing=" + B2S(isfleeing) + " attack=" + B2S(attack_running) + " retreatCtl=" + B2S(retreat_controlled)
 endfunction
 
 function DebugHeroOrderBefore takes unit u, string source, string kind, integer order, integer target, real x, real y returns integer
@@ -212,3 +212,57 @@ function DebugHeroAddAssault takes integer count, integer unitid, string source 
   return AddAssault(count, unitid)
 endfunction
 
+
+function DebugHeroAttackState takes string phase, string source returns nothing
+  if debug_hero_tracking then
+    call DebugHeroLog("ATTACK LIFECYCLE: phase=" + phase + " source=" + source + " operation=" + Int2Str(debug_attack_operation) + " command=" + Int2Str(debug_attack_command) + " attack=" + B2S(attack_running) + " break=" + B2S(break_attack) + " fleeing=" + B2S(isfleeing) + " canFlee=" + B2S(canflee) + " retreatCtl=" + B2S(retreat_controlled) + " captainRetreating=" + B2S(CaptainRetreating()))
+  endif
+endfunction
+
+function DebugHeroAttackBegin takes string source returns integer
+  if debug_hero_tracking then
+    set debug_attack_sequence = debug_attack_sequence + 1
+    set debug_attack_operation = debug_attack_sequence
+    call DebugHeroAttackState("BEGIN", source)
+  endif
+  return debug_attack_operation
+endfunction
+
+function DebugHeroAttackEnd takes integer operation, integer parent, string source returns nothing
+  if debug_hero_tracking then
+    call DebugHeroLog("ATTACK OPERATION END: operation=" + Int2Str(operation) + " parent=" + Int2Str(parent) + " source=" + source)
+    call DebugHeroAttackState("END", source)
+    if debug_attack_operation == operation then
+      set debug_attack_operation = parent
+    endif
+  endif
+endfunction
+
+function DebugHeroAttackMoveKill takes unit target, string source returns nothing
+  if debug_hero_tracking then
+    set debug_attack_command = debug_attack_command + 1
+    call DebugHeroLog("ATTACK COMMAND: operation=" + Int2Str(debug_attack_operation) + " command=" + Int2Str(debug_attack_command) + " source=" + source + " kind=unit target=" + Int2Str(GetHandleId(target)) + " x=" + Int2Str(R2I(GetUnitX(target))) + " y=" + Int2Str(R2I(GetUnitY(target))))
+    call DebugHeroAttackState("ISSUE", source)
+  endif
+  call AttackMoveKill(target)
+endfunction
+
+function DebugHeroAttackMoveXY takes integer x, integer y, string source returns nothing
+  if debug_hero_tracking then
+    set debug_attack_command = debug_attack_command + 1
+    call DebugHeroLog("ATTACK COMMAND: operation=" + Int2Str(debug_attack_operation) + " command=" + Int2Str(debug_attack_command) + " source=" + source + " kind=point x=" + Int2Str(x) + " y=" + Int2Str(y))
+    call DebugHeroAttackState("ISSUE", source)
+  endif
+  call AttackMoveXY(x,y)
+endfunction
+
+function DebugHeroClearCaptainTargets takes string source returns nothing
+  call DebugHeroAttackState("CLEAR_TARGETS_CALL", source)
+  call ClearCaptainTargets()
+endfunction
+
+function DebugHeroRetreatMembership takes unit u, string source returns nothing
+  if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
+    call DebugHeroLog("HERO RETREAT MEMBERSHIP: source=" + source + DebugHeroState(u))
+  endif
+endfunction

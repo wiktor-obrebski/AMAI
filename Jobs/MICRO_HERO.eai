@@ -107,8 +107,11 @@ function GoHomeIfMainHero takes unit u, real x, real y, boolean defer_retreat, s
       call DebugHeroCaptainGoHome("Jobs/MICRO_HERO.eai:GoHomeIfMainHero:107")
       call TeleportCaptain(x, y)
       set break_attack = attack_running
+      call DebugHeroAttackState("STATE_WRITE", "MICRO_HERO.eai:109")
       set isfleeing = true
+      call DebugHeroAttackState("STATE_WRITE", "MICRO_HERO.eai:110")
       set attack_running = false
+      call DebugHeroAttackState("STATE_WRITE", "MICRO_HERO.eai:111")
     endif
   endif
 endfunction

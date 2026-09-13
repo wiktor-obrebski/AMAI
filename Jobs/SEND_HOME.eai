@@ -68,6 +68,7 @@ function SendUnitHomeJob takes unit u, integer p returns nothing
     endif
     if p >= 1 then
         call GroupRemoveUnit(in_retreat_group, u)
+        call DebugHeroRetreatMembership(u, "SEND_HOME.eai:70")
     endif
 
     call TQAddUnitJob(2, RESET_GUARD_POSITION, p, u)
@@ -118,7 +119,9 @@ function SendUnitHomeJob takes unit u, integer p returns nothing
     call DebugHeroRemoveGuardPosition(u, "Jobs/SEND_HOME.eai:SendUnitHomeJob:116")
     call DebugHeroIssueImmediateOrder(u, "holdposition", "Jobs/SEND_HOME.eai:SendUnitHomeJob:117")
     call GroupAddUnit(retreat_reset_pending, u)
+    call DebugHeroRetreatMembership(u, "SEND_HOME.eai:120")
     call GroupRemoveUnit(in_retreat_group, u)
+    call DebugHeroRetreatMembership(u, "SEND_HOME.eai:121")
     if IsUnitInGroup(u, debug_retreat_transit_group) then
       call TraceAll("DBG RETREAT TRANSIT ARRIVED: rid=" + Int2Str(debug_retreat_transit_id) + " id=" + Int2Str(GetHandleId(u)) + " distFight=" + Int2Str(R2I(DistanceBetweenPoints_dk(GetUnitLoc(u), debug_retreat_origin))))
       call GroupRemoveUnit(debug_retreat_transit_group, u)
