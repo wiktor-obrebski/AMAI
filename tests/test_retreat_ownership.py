@@ -71,13 +71,11 @@ def load_jass_function(env, path, name):
     exec('\n'.join(lines), env)
     # Execute actual diagnostic passthrough wrappers in existing behaviour tests.
     # Their logging is disabled here; dedicated tests also exercise enabled logging.
-    if path != 'Diagnostics/HeroOrders.eai':
-        env.setdefault('debug_hero_tracking', False)
-        for wrapper in set(re.findall(r'\b(DebugHero\w+)\(', '\n'.join(source))):
-            if wrapper not in env:
-                load_jass_function(env, 'Diagnostics/HeroOrders.eai', wrapper)
-        if 'DebugHeroOrderAfter' not in env:
-            load_jass_function(env, 'Diagnostics/HeroOrders.eai', 'DebugHeroOrderAfter')
+    env.setdefault('debug_hero_tracking', False)
+    for wrapper in set(re.findall(r'\b(DebugHero\w+)\(', '\n'.join(source[1:]))):
+        if wrapper not in env:
+            load_jass_function(env, 'Diagnostics/HeroOrders.eai', wrapper)
+
 
 
 class RetreatOwnershipTests(unittest.TestCase):
