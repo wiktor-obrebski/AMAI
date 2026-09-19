@@ -11,6 +11,8 @@ class AttackTrackingTests(unittest.TestCase):
         calls, logs = [], []
         env = dict(debug_hero_tracking=enabled, debug_attack_sequence=0,
             debug_attack_operation=0, debug_attack_command=0,
+            debug_hero_control_call=0, hero_unit={1:None,2:None,3:None},
+            CaptainGroupSize=lambda:0,
             DebugHeroLog=logs.append, Int2Str=str, R2I=int, B2S=str,
             attack_running=True, break_attack=False, isfleeing=True, canflee=True,
             retreat_controlled=True, CaptainRetreating=lambda:False,

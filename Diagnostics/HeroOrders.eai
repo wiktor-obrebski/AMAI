@@ -24,7 +24,7 @@ function DebugHeroState takes unit u returns string
   endif
   set dx = GetUnitX(u) - homeX
   set dy = GetUnitY(u) - homeY
-  return " operation=" + Int2Str(debug_attack_operation) + " command=" + Int2Str(debug_attack_command) + " hero=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " x=" + Int2Str(R2I(GetUnitX(u))) + " y=" + Int2Str(R2I(GetUnitY(u))) + " hp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_LIFE))) + " maxHp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_MAX_LIFE))) + " current=" + Int2Str(GetUnitCurrentOrder(u)) + " homeX=" + Int2Str(R2I(homeX)) + " homeY=" + Int2Str(R2I(homeY)) + " distHome=" + Int2Str(R2I(SquareRoot(dx * dx + dy * dy))) + " recoveryX=" + Int2Str(R2I(GetLocationX(recovery_home))) + " recoveryY=" + Int2Str(R2I(GetLocationY(recovery_home))) + " recoveryAnchor=" + Int2Str(GetHandleId(recovery_anchor)) + " retreat=" + B2S(IsUnitInGroup(u, in_retreat_group)) + " pending=" + B2S(IsUnitInGroup(u, retreat_reset_pending)) + " healing=" + B2S(IsUnitInGroup(u, unit_healing)) + " rescue=" + B2S(IsUnitInGroup(u, unit_rescueing)) + " harass=" + B2S(IsUnitInGroup(u, unit_harassing)) + " transport=" + B2S(IsUnitInGroup(u, unit_zepplin_move)) + " buying=" + B2S(IsUnitInGroup(u, unit_buying_item)) + " canFlee=" + B2S(canflee) + " fleeing=" + B2S(isfleeing) + " attack=" + B2S(attack_running) + " retreatCtl=" + B2S(retreat_controlled)
+  return " controlCall=" + Int2Str(debug_hero_control_call) + " operation=" + Int2Str(debug_attack_operation) + " command=" + Int2Str(debug_attack_command) + " hero=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " x=" + Int2Str(R2I(GetUnitX(u))) + " y=" + Int2Str(R2I(GetUnitY(u))) + " hp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_LIFE))) + " maxHp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_MAX_LIFE))) + " current=" + Int2Str(GetUnitCurrentOrder(u)) + " homeX=" + Int2Str(R2I(homeX)) + " homeY=" + Int2Str(R2I(homeY)) + " distHome=" + Int2Str(R2I(SquareRoot(dx * dx + dy * dy))) + " recoveryX=" + Int2Str(R2I(GetLocationX(recovery_home))) + " recoveryY=" + Int2Str(R2I(GetLocationY(recovery_home))) + " recoveryAnchor=" + Int2Str(GetHandleId(recovery_anchor)) + " retreat=" + B2S(IsUnitInGroup(u, in_retreat_group)) + " pending=" + B2S(IsUnitInGroup(u, retreat_reset_pending)) + " healing=" + B2S(IsUnitInGroup(u, unit_healing)) + " rescue=" + B2S(IsUnitInGroup(u, unit_rescueing)) + " harass=" + B2S(IsUnitInGroup(u, unit_harassing)) + " transport=" + B2S(IsUnitInGroup(u, unit_zepplin_move)) + " buying=" + B2S(IsUnitInGroup(u, unit_buying_item)) + " canFlee=" + B2S(canflee) + " fleeing=" + B2S(isfleeing) + " attack=" + B2S(attack_running) + " retreatCtl=" + B2S(retreat_controlled)
 endfunction
 
 function DebugHeroOrderBefore takes unit u, string source, string kind, integer order, integer target, real x, real y returns integer
@@ -163,53 +163,107 @@ function DebugHeroUnitUseItemTarget takes unit u, item it, widget target, string
   return accepted
 endfunction
 
+function DebugHeroControlSample takes integer controlCall, string phase, unit focus returns nothing
+  local integer slot = 1
+  local boolean focusSeen = false
+  loop
+    exitwhen slot > 3
+    if hero_unit[slot] != null then
+      call DebugHeroLog("HERO CONTROL STATE: call=" + Int2Str(controlCall) + " phase=" + phase + DebugHeroState(hero_unit[slot]))
+      if hero_unit[slot] == focus then
+        set focusSeen = true
+      endif
+    endif
+    set slot = slot + 1
+  endloop
+  if focus != null and not focusSeen then
+    call DebugHeroLog("HERO CONTROL STATE: call=" + Int2Str(controlCall) + " phase=" + phase + DebugHeroState(focus))
+  endif
+endfunction
+
+function DebugHeroControlBefore takes string source, string action, string details, unit focus returns integer
+  if not debug_hero_tracking then
+    return 0
+  endif
+  set debug_hero_control_call = debug_hero_control_call + 1
+  call DebugHeroLog("HERO CONTROL: phase=BEFORE call=" + Int2Str(debug_hero_control_call) + " source=" + source + " action=" + action + details + " operation=" + Int2Str(debug_attack_operation) + " command=" + Int2Str(debug_attack_command) + " attack=" + B2S(attack_running) + " fleeing=" + B2S(isfleeing) + " retreatCtl=" + B2S(retreat_controlled) + " captainSize=" + Int2Str(CaptainGroupSize()) + " captainRetreating=" + B2S(CaptainRetreating()))
+  call DebugHeroControlSample(debug_hero_control_call, "BEFORE", focus)
+  return debug_hero_control_call
+endfunction
+
+function DebugHeroControlAfter takes integer controlCall, unit focus, string result returns nothing
+  if controlCall == 0 then
+    return
+  endif
+  call DebugHeroControlSample(controlCall, "AFTER", focus)
+  call DebugHeroLog("HERO CONTROL: phase=AFTER call=" + Int2Str(controlCall) + result + " captainSize=" + Int2Str(CaptainGroupSize()) + " captainRetreating=" + B2S(CaptainRetreating()))
+endfunction
+
 function DebugHeroRemoveGuardPosition takes unit u, string source returns nothing
+  local integer controlCall = 0
   if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
-    call DebugHeroLog("HERO CONTROL: source=" + source + " action=RemoveGuardPosition" + DebugHeroState(u))
+    set controlCall = DebugHeroControlBefore(source, "RemoveGuardPosition", " unit=" + Int2Str(GetHandleId(u)), u)
   endif
   call RemoveGuardPosition(u)
+  call DebugHeroControlAfter(controlCall, u, "")
 endfunction
 
 function DebugHeroRecycleGuardPosition takes unit u, string source returns nothing
+  local integer controlCall = 0
   if debug_hero_tracking and u != null and IsUnitType(u, UNIT_TYPE_HERO) then
-    call DebugHeroLog("HERO CONTROL: source=" + source + " action=RecycleGuardPosition" + DebugHeroState(u))
+    set controlCall = DebugHeroControlBefore(source, "RecycleGuardPosition", " unit=" + Int2Str(GetHandleId(u)), u)
   endif
   call RecycleGuardPosition(u)
+  call DebugHeroControlAfter(controlCall, u, "")
 endfunction
 
 function DebugHeroCaptainGoHome takes string source returns nothing
+  local integer controlCall = 0
   if debug_hero_tracking then
-    call DebugHeroLog("HERO CONTROL: source=" + source + " action=CaptainGoHome")
+    set controlCall = DebugHeroControlBefore(source, "CaptainGoHome", "", null)
   endif
   call CaptainGoHome()
+  call DebugHeroControlAfter(controlCall, null, "")
 endfunction
 
 function DebugHeroCaptainAttack takes real x, real y, string source returns nothing
+  local integer controlCall = 0
   if debug_hero_tracking then
-    call DebugHeroLog("HERO CONTROL: source=" + source + " action=CaptainAttack" + " x=" + Int2Str(R2I(x)) + " y=" + Int2Str(R2I(y)))
+    set controlCall = DebugHeroControlBefore(source, "CaptainAttack", " x=" + Int2Str(R2I(x)) + " y=" + Int2Str(R2I(y)), null)
   endif
   call CaptainAttack(x, y)
+  call DebugHeroControlAfter(controlCall, null, "")
 endfunction
 
 function DebugHeroSetCaptainHome takes integer captain, real x, real y, string source returns nothing
+  local integer controlCall = 0
   if debug_hero_tracking then
-    call DebugHeroLog("HERO CONTROL: source=" + source + " action=SetCaptainHome" + " captain=" + Int2Str(captain) + " x=" + Int2Str(R2I(x)) + " y=" + Int2Str(R2I(y)))
+    set controlCall = DebugHeroControlBefore(source, "SetCaptainHome", " captain=" + Int2Str(captain) + " x=" + Int2Str(R2I(x)) + " y=" + Int2Str(R2I(y)), null)
   endif
   call SetCaptainHome(captain, x, y)
+  call DebugHeroControlAfter(controlCall, null, "")
 endfunction
 
 function DebugHeroInitAssault takes string source returns nothing
+  local integer controlCall = 0
   if debug_hero_tracking then
-    call DebugHeroLog("HERO CONTROL: source=" + source + " action=InitAssault")
+    set controlCall = DebugHeroControlBefore(source, "InitAssault", "", null)
   endif
   call InitAssault()
+  call DebugHeroControlAfter(controlCall, null, "")
 endfunction
 
 function DebugHeroAddAssault takes integer count, integer unitid, string source returns boolean
+  local integer controlCall = 0
+  local boolean accepted = false
   if debug_hero_tracking then
-    call DebugHeroLog("HERO CONTROL: source=" + source + " action=AddAssault" + " count=" + Int2Str(count) + " unitid=" + Int2Str(unitid))
+    set controlCall = DebugHeroControlBefore(source, "AddAssault", " count=" + Int2Str(count) + " unitid=" + Int2Str(unitid), null)
   endif
-  return AddAssault(count, unitid)
+  set accepted = AddAssault(count, unitid)
+  if controlCall != 0 then
+    call DebugHeroControlAfter(controlCall, null, " accepted=" + B2S(accepted))
+  endif
+  return accepted
 endfunction
 
 
@@ -239,26 +293,37 @@ function DebugHeroAttackEnd takes integer operation, integer parent, string sour
 endfunction
 
 function DebugHeroAttackMoveKill takes unit target, string source returns nothing
+  local integer controlCall = 0
   if debug_hero_tracking then
     set debug_attack_command = debug_attack_command + 1
     call DebugHeroLog("ATTACK COMMAND: operation=" + Int2Str(debug_attack_operation) + " command=" + Int2Str(debug_attack_command) + " source=" + source + " kind=unit target=" + Int2Str(GetHandleId(target)) + " x=" + Int2Str(R2I(GetUnitX(target))) + " y=" + Int2Str(R2I(GetUnitY(target))))
     call DebugHeroAttackState("ISSUE", source)
+    set controlCall = DebugHeroControlBefore(source, "AttackMoveKill", " target=" + Int2Str(GetHandleId(target)) + " x=" + Int2Str(R2I(GetUnitX(target))) + " y=" + Int2Str(R2I(GetUnitY(target))), null)
   endif
   call AttackMoveKill(target)
+  call DebugHeroControlAfter(controlCall, null, "")
 endfunction
 
 function DebugHeroAttackMoveXY takes integer x, integer y, string source returns nothing
+  local integer controlCall = 0
   if debug_hero_tracking then
     set debug_attack_command = debug_attack_command + 1
     call DebugHeroLog("ATTACK COMMAND: operation=" + Int2Str(debug_attack_operation) + " command=" + Int2Str(debug_attack_command) + " source=" + source + " kind=point x=" + Int2Str(x) + " y=" + Int2Str(y))
     call DebugHeroAttackState("ISSUE", source)
+    set controlCall = DebugHeroControlBefore(source, "AttackMoveXY", " x=" + Int2Str(x) + " y=" + Int2Str(y), null)
   endif
   call AttackMoveXY(x,y)
+  call DebugHeroControlAfter(controlCall, null, "")
 endfunction
 
 function DebugHeroClearCaptainTargets takes string source returns nothing
+  local integer controlCall = 0
   call DebugHeroAttackState("CLEAR_TARGETS_CALL", source)
+  if debug_hero_tracking then
+    set controlCall = DebugHeroControlBefore(source, "ClearCaptainTargets", "", null)
+  endif
   call ClearCaptainTargets()
+  call DebugHeroControlAfter(controlCall, null, "")
 endfunction
 
 function DebugHeroRetreatMembership takes unit u, string source returns nothing

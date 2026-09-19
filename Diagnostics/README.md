@@ -20,7 +20,7 @@ the following logical caches. Each uses `P<zero-based player id>`, `Count`, and
 | `AMAI_HeroTrace_P<id>.w3v` | AI order sources/results, control writes, hero snapshots/support |
 | `AMAI_HeroEvents.w3v` | Map-side issued-order events, including orders without an AI source marker |
 
-Check for `HERO TRACKING START: version=2` and `HERO EVENT OBSERVER START: version=1`.
+Check for `HERO TRACKING START: version=3` and `HERO EVENT OBSERVER START: version=1`.
 If the latter is missing, do not interpret absent order events as absent orders.
 The map observer registers immediate, point and target order events for computer
 players. It does not claim that every native AI action emits such an event.
@@ -144,3 +144,59 @@ operation IDs, and comparison of changed gameplay statements against baseline
 404a07a after removing diagnostic statements and unwrapping calls. Diagnostic
 I/O adds overhead even though gameplay statements are unchanged. Warcraft runtime
 behavior and cross-clock correlation still require a fresh game log.
+
+## Immediate control-call effects (version 3)
+
+`HERO CONTROL` now has paired `phase=BEFORE` / `phase=AFTER` records, joined by
+`call` within one player's AI log. BEFORE includes source, action, arguments,
+operation/attack-command context, retreat flags and captain state. AFTER includes
+captain state and, for `AddAssault`, its unchanged boolean result. Calls receive
+IDs even when they do not change any hero order. A missing AFTER is incomplete
+execution or capture, not evidence of a successful call.
+
+Between each pair, `HERO CONTROL STATE` records every non-null `hero_unit[1..3]`
+slot immediately before and after the original call, using the existing hero
+state fields (handle, position, HP, current order, retreat/pending and job flags).
+Guard calls also sample their hero argument if absent from those slots. No
+additional unit enumeration or nearby-strength scan runs per call. Extra/custom
+heroes outside that roster remain covered by periodic snapshots and map events,
+but are not included in captain-call samples. Guard calls on nonheroes pass
+through without these records.
+
+Covered wrappers: `RemoveGuardPosition`, `RecycleGuardPosition`, `InitAssault`,
+`AddAssault`, `SetCaptainHome`, `CaptainGoHome`, `CaptainAttack`, `AttackMoveKill`,
+`AttackMoveXY` and `ClearCaptainTargets`. Coverage is at the existing AMAI wrapper
+sites; calls inside `common_original.eai` and the engine are still outside it.
+Sources remain leaf-function labels, not call stacks: for example, a release
+through `RecycleGuardPositionAM` identifies that shared helper. An `AddAssault`
+request is by type/count; the log does not assert which handles it recruited.
+
+To investigate shopping release or conflicting home/outward orders:
+
+1. Find the map order event and align its clock as described above.
+2. Compare that hero's BEFORE/AFTER `current` values for the nearby guard and
+   captain calls. A change brackets an immediate effect of that call; it is
+   strong evidence, not an internal engine stack trace.
+3. If both orders are unchanged, an identical-order reissue or a change and
+   reversal within the call remains possible. Consult map events. Equal order
+   IDs do not prove equal destinations: AI samples cannot query the current
+   order's target, and a move can be retargeted while keeping its order ID.
+4. If the event occurs later, retain unknown attribution. Read preceding
+   `RecycleGuardPosition`, `AddAssault`, home changes and target commands/clears
+   in call-ID order. Hero state records include `controlCall`, the latest issued
+   wrapped control call, as correlation context only. It is not the last writer
+   of that hero's order, nor an active engine target.
+
+The map observer is unchanged (version 1); the AI start marker is now version 3.
+Keep the observer installed. AI call pairs can be compared without clock alignment,
+but locating a map event inside a pair still requires sufficiently precise clock
+alignment; an uncertain boundary must remain uncertain. No shared mutable
+"current caller" or cross-VM callback is introduced.
+
+This remains tracking-only: no added target clearing, orders, ownership changes,
+waits or tactical conditions. With three roster heroes, a control call adds six
+state records and two call records; frequent formation calls can substantially
+grow the log and add timing overhead. The existing flags disable this tracing.
+Tests exercise native argument/result passthrough, immediate and delayed mocked
+effects, call IDs, roster/focus handling and byte-identical gameplay sources.
+They do not establish native engine causality or Warcraft runtime safety.

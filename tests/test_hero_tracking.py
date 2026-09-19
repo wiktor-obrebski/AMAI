@@ -47,6 +47,10 @@ class HeroTrackingTests(unittest.TestCase):
             raise AssertionError('I2S is unavailable in the AI VM')
         env = dict(debug_hero_tracking=True, debug_hero_cache=None,
             debug_hero_index=0, debug_hero_dirty=False, tq_timer='timer',
+            debug_hero_control_call=0, debug_attack_operation=0, debug_attack_command=0,
+            attack_running=False, isfleeing=False, retreat_controlled=False,
+            hero_unit={1:None,2:None,3:None}, B2S=str,
+            CaptainGroupSize=lambda:0, CaptainRetreating=lambda:False,
             I2S=unavailable_i2s, Int2Str=str, R2I=int, GetAiPlayer=lambda:1,
             TimerGetElapsed=lambda t:130.187,
             InitGameCache=lambda name:(calls.append(('cache',name)), 'cache')[1],
@@ -60,15 +64,16 @@ class HeroTrackingTests(unittest.TestCase):
         env['DebugHeroInitAssault']('FormGroupAM')
         self.assertEqual(calls.count(('cache','AMAI_HeroTrace_P1.w3v')), 1)
         self.assertEqual(calls.count(('assault',)), 2)
-        self.assertEqual([r[:3] for r in records], [('cache','P1','L0'),('cache','P1','L1')])
+        self.assertEqual([r[:3] for r in records], [('cache','P1','L'+str(i)) for i in range(4)])
         self.assertTrue(all(r[3].startswith('tms=130187 HERO CONTROL:') for r in records))
-        self.assertEqual(env['debug_hero_index'], 2)
+        self.assertEqual(env['debug_hero_index'], 4)
         self.assertTrue(env['debug_hero_dirty'])
 
     def test_add_assault_keeps_boolean_return(self):
         for result in (True, False):
             calls=[]
-            env=dict(debug_hero_tracking=True, Int2Str=str, DebugHeroLog=lambda s: None,
+            env=dict(debug_hero_tracking=True, Int2Str=str, B2S=str, DebugHeroLog=lambda s: None,
+                     DebugHeroControlBefore=lambda *a:1, DebugHeroControlAfter=lambda *a:None,
                      AddAssault=lambda *a: (calls.append(a), result)[1])
             load_jass_function(env, ORDERS, 'DebugHeroAddAssault')
             self.assertIs(env['DebugHeroAddAssault'](3, 100, 'source'), result)

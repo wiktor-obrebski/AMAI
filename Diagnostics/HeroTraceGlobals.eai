@@ -7,3 +7,4 @@
     integer debug_attack_sequence = 0
     integer debug_attack_operation = 0
     integer debug_attack_command = 0
+    integer debug_hero_control_call = 0
