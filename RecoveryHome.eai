@@ -69,7 +69,9 @@ function UpdateRecoveryHome takes nothing returns nothing
       // TeleportHome must not attempt a TP to a nonexistent anchor.
       set reason = "no-townhall"
     endif
-    call TraceAll("DBG RECOVERY HOME: reason=" + reason + " oldAnchor=" + Int2Str(GetHandleId(recovery_anchor)) + " anchor=" + Int2Str(GetHandleId(recovery_choice)) + " x=" + Int2Str(R2I(GetLocationX(recovery_home))) + " y=" + Int2Str(R2I(GetLocationY(recovery_home))) + " enemy=" + Int2Str(chosen_danger) + " defenseX=" + Int2Str(R2I(GetLocationX(captain_home))) + " defenseY=" + Int2Str(R2I(GetLocationY(captain_home))))
+    if debug_hero_tracking then
+      call TraceAll("DBG RECOVERY HOME: reason=" + reason + " oldAnchor=" + Int2Str(GetHandleId(recovery_anchor)) + " anchor=" + Int2Str(GetHandleId(recovery_choice)) + " x=" + Int2Str(R2I(GetLocationX(recovery_home))) + " y=" + Int2Str(R2I(GetLocationY(recovery_home))) + " enemy=" + Int2Str(chosen_danger) + " defenseX=" + Int2Str(R2I(GetLocationX(captain_home))) + " defenseY=" + Int2Str(R2I(GetLocationY(captain_home))))
+    endif
     set recovery_anchor = recovery_choice
   elseif recovery_choice != null then
     call MoveLocation(recovery_home, GetUnitX(recovery_choice), GetUnitY(recovery_choice))

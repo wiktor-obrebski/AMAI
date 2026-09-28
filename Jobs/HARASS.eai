@@ -134,9 +134,13 @@ function HarassJob takes integer key, unit target returns nothing
   set timedelay = LoadInteger(additional_info, key, WINDWALK_COUNT) // Delay count so windwalkers show themselves after a period of waiting
 
   call DisplayToAllJobDebug("HARASS JOB START")
-  call TraceAll("HARASS:" + Int2Str(BlzGroupGetSize(harasser)) + " Units")
+  if debug_hero_tracking then
+    call TraceAll("HARASS:" + Int2Str(BlzGroupGetSize(harasser)) + " Units")
+  endif
   if BlzGroupGetSize(harasser) == 0 then
-    call TraceAll("HARASS ended as no units")
+    if debug_hero_tracking then
+      call TraceAll("HARASS ended as no units")
+    endif
     call SaveInteger(additional_info, key, STATE_RETREAT, 2)
     call DestroyGroup(harasser)
     set harasser = null
@@ -227,7 +231,9 @@ function HarassJob takes integer key, unit target returns nothing
       set hu = null
       return
     else
-      call TraceAll("HARASS End and Recycle")
+      if debug_hero_tracking then
+        call TraceAll("HARASS End and Recycle")
+      endif
       call GroupRecycleHarrassPositionInstant(CopyGroup(harasser))
       call SaveInteger(additional_info, key, STATE_RETREAT, 2)
       call DestroyGroup(harasser)
@@ -260,7 +266,9 @@ function HarassJob takes integer key, unit target returns nothing
       set target = GetHarassMainHallTarget(target, hu)
     endif
     if target == null then
-      call TraceAll("HARASS No suitable target")
+      if debug_hero_tracking then
+        call TraceAll("HARASS No suitable target")
+      endif
     endif
   endif
 

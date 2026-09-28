@@ -96,7 +96,9 @@ endfunction
 
 function GoHomeIfMainHero takes unit u, real x, real y, boolean defer_retreat, string reason returns nothing
   if main_army >= 0 and IsUnitInGroup(u, army_group[main_army]) then
-    call TraceAll("DBG MICRO HERO MAIN RETREAT: reason=" + reason + " hero=" + Int2Str(GetHandleId(u)) + " hp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_LIFE))) + " maxHp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_MAX_LIFE))) + " attackRunning=" + B2S(attack_running) + " retreatCtl=" + B2S(retreat_controlled) + " canFlee=" + B2S(canflee) + " fleeing=" + B2S(isfleeing) + " captain=" + Int2Str(CaptainGroupSize()) + " captainRetreating=" + B2S(CaptainRetreating()))
+    if debug_hero_tracking then
+      call TraceAll("DBG MICRO HERO MAIN RETREAT: reason=" + reason + " hero=" + Int2Str(GetHandleId(u)) + " hp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_LIFE))) + " maxHp=" + Int2Str(R2I(GetUnitState(u, UNIT_STATE_MAX_LIFE))) + " attackRunning=" + B2S(attack_running) + " retreatCtl=" + B2S(retreat_controlled) + " canFlee=" + B2S(canflee) + " fleeing=" + B2S(isfleeing) + " captain=" + Int2Str(CaptainGroupSize()) + " captainRetreating=" + B2S(CaptainRetreating()))
+    endif
 
     if defer_retreat then
       if attack_running then
@@ -130,7 +132,9 @@ function TeleportHome takes integer hn returns nothing
   set dy = GetLocationY(destination)
   // Never fall back to the besieged defense destination for an emergency TP.
   if not IsRecoveryAnchorValid(recovery_anchor) then
-    call TraceAll("DBG RECOVERY TP SKIP: reason=no-townhall")
+    if debug_hero_tracking then
+      call TraceAll("DBG RECOVERY TP SKIP: reason=no-townhall")
+    endif
     set destination = null
     return
   endif

@@ -38,6 +38,8 @@ def load_jass_function(env, path, name):
         if re.match(r'call (TraceAll|DisplayToAllJobDebug|CreateDebugTag)\(', line):
             lines.append('    ' * indent + 'pass')
             continue
+        line = re.sub(r'\)then$', ') then', line)
+        line = re.sub(r'\bfunction (\w+)', r'\1', line)
         line = re.sub(r'\btrue\b', 'True', line)
         line = re.sub(r'\bfalse\b', 'False', line)
         line = re.sub(r'\bnull\b', 'None', line)

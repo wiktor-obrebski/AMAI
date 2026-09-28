@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ## Unreleased
 
 ### Diagnostics
+- Disable hero/map tracking and legacy trace persistence by default; skip diagnostic argument evaluation, formation/retreat scans and diagnostic strength queries.
 - Use AMAI Int2Str in AI hero diagnostics; native I2S is not supported in the AI VM. Exercise the real logger in the formation-wrapper regression test.
 - Avoid shadowing the global `hero` array in hero tracking; add a diagnostic variable-name regression check.
 - Trace hero order sources/results and captain/guard writes, with two-second position, retreat-state and nearby-support snapshots.
@@ -17,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - Undead will buy an orb of corruption if you have a lich.
 
 ### Fixed
+- Recheck native retreat after the retreat controller yields, latch attack cancellation and reuse the existing send-home path; stop post-sleep attack recruitment after cancellation.
 - Capture units already at recovery, including TP arrivals, without counting them as still travelling.
 - Separate retreat/healing destinations from tactical captain home; retain a recovery town hall until it is lost or a less threatened base is available, and use it for emergency home teleports.
 - Preserve creep-selection state across diagnostic strength queries so creep-start logging cannot change the alliance-target/chat decision.

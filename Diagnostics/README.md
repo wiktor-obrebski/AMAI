@@ -97,9 +97,14 @@ This does not reproduce Warcraft VM failures or prove the opening stall is fixed
   It is not zero-cost; game performance and engine event delivery still require
   an actual Warcraft test. At three heroes the snapshots alone produce roughly
   5,400 records in 30 minutes, plus order/control records.
-- Disable `debug_hero_tracking` in `HeroTraceGlobals.eai` and
-  `amai_hero_event_tracking` in `HeroMapGlobals.eai` and rebuild to turn off these
-  diagnostics. Wrappers then pass through with a small function-call overhead.
+- Diagnostics are disabled by default: `debug_hero_tracking` in
+  `HeroTraceGlobals.eai` and `amai_hero_event_tracking` in `HeroMapGlobals.eai`
+  are false. This skips the snapshot thread, map event/flush timers, legacy
+  TraceAll cache writes and argument evaluation, and diagnostic formation,
+  retreat and strength scans. Wrappers pass native commands through.
+  Enable the flags and rebuild only when collecting a diagnostic run.
+  Reinstall both AI scripts and map-side code to disable an older observer
+  already embedded in a map; rebuilding the AI alone cannot stop that timer.
 
 Validation: `python -m unittest discover -s tests`; generated Reforged common and
 four race scripts and both map variants checked with pjass. Source-level tests

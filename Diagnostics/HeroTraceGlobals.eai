@@ -1,5 +1,5 @@
     // Diagnostic-only. Disable both this and map observer for normal builds.
-    boolean debug_hero_tracking = true
+    boolean debug_hero_tracking = false
     gamecache debug_hero_cache = null
     integer debug_hero_index = 0
     integer debug_hero_request = 0

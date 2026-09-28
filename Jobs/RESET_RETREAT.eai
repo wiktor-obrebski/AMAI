@@ -28,7 +28,9 @@ function ResetRetreatJob takes unit u returns nothing
     call TQAddUnitJob(5, RESET_RETREAT, 0, u)
     return
   endif
-  call TraceAll("DBG RETREAT RESET RELEASE: id=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " alive=" + B2S(UnitAlive(u)) + " fleeing=" + B2S(isfleeing))
+  if debug_hero_tracking then
+    call TraceAll("DBG RETREAT RESET RELEASE: id=" + Int2Str(GetHandleId(u)) + " type=" + Int2Str(GetUnitTypeId(u)) + " alive=" + B2S(UnitAlive(u)) + " fleeing=" + B2S(isfleeing))
+  endif
   call GroupRemoveUnit(retreat_reset_pending, u)
   call DebugHeroRetreatMembership(u, "RESET_RETREAT.eai:30")
   call ResetGuardPositionJob(u)
