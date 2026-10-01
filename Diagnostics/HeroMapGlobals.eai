@@ -1,4 +1,4 @@
-    boolean amai_hero_event_tracking = true
+    boolean amai_hero_event_tracking = false
     gamecache amai_hero_event_cache = null
     timer amai_hero_event_clock = null
     trigger amai_hero_event_trigger = null

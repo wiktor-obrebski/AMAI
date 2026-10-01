@@ -21,7 +21,9 @@ function TeleportJob takes unit hu returns nothing
     set teleporting = false
 
     if main_hero_home_tp_retreat_pending then
-      call TraceAll("DBG HERO TP COMPLETE ATTACK ABORT: hero=" + Int2Str(GetHandleId(hu)) + " attackRunning=" + B2S(attack_running) + " captain=" + Int2Str(CaptainGroupSize()) + " captainHome=" + B2S(CaptainIsHome()) + " captainRetreating=" + B2S(CaptainRetreating()))
+      if debug_hero_tracking then
+        call TraceAll("DBG HERO TP COMPLETE ATTACK ABORT: hero=" + Int2Str(GetHandleId(hu)) + " attackRunning=" + B2S(attack_running) + " captain=" + Int2Str(CaptainGroupSize()) + " captainHome=" + B2S(CaptainIsHome()) + " captainRetreating=" + B2S(CaptainRetreating()))
+      endif
       set break_attack = attack_running
       call DebugHeroAttackState("STATE_WRITE", "TELEPORT.eai:25")
       call DebugHeroCaptainGoHome("Jobs/TELEPORT.eai:TeleportJob:26")
