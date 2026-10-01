@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - Undead will buy an orb of corruption if you have a lich.
 
 ### Fixed
+- Preserve the shared army location in attack progress checks and release each temporary target location only once.
 - Recheck native retreat after the retreat controller yields, latch attack cancellation and reuse the existing send-home path; stop post-sleep attack recruitment after cancellation.
 - Capture units already at recovery, including TP arrivals, without counting them as still travelling.
 - Separate retreat/healing destinations from tactical captain home; retain a recovery town hall until it is lost or a less threatened base is available, and use it for emergency home teleports.

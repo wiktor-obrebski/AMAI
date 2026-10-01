@@ -13044,7 +13044,7 @@ function CommonSleepUntilTargetDeadAM takes unit target, boolean iscreeping, boo
 
     if attacking_expansion and current_expansion != null and main_army >= 0 and army_loc[main_army] != null and not CaptainInCombat(true) then
       set target_loc = GetUnitLoc(target)
-      set cur_dist = DistanceBetweenPoints_dd(army_loc[main_army], target_loc)
+      set cur_dist = DistanceBetweenPoints(army_loc[main_army], target_loc)
       call RemoveLocation(target_loc)
       set target_loc = null
       if last_dist >= 0 and RAbs(cur_dist - last_dist) <= 300 then
@@ -13068,7 +13068,7 @@ function CommonSleepUntilTargetDeadAM takes unit target, boolean iscreeping, boo
     endif
     if not attacking_expansion and main_army >= 0 and army_loc[main_army] != null and not CaptainInCombat(true) and not CaptainAtGoal() and not CaptainIsHome() then
       set target_loc = GetUnitLoc(target)
-      set gen_cur_dist = DistanceBetweenPoints_dd(army_loc[main_army], target_loc)
+      set gen_cur_dist = DistanceBetweenPoints(army_loc[main_army], target_loc)
       call RemoveLocation(target_loc)
       set target_loc = null
       if gen_last_dist >= 0 and RAbs(gen_cur_dist - gen_last_dist) <= 300 then
